@@ -30,27 +30,29 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
+	ETH62 = 62
+	ETH63 = 63
+	ETH64 = 64
 	ETH65 = 65
 	ETH66 = 66
 )
 
 // ProtocolName is the official short name of the `eth` protocol used during
 // devp2p capability negotiation.
-const ProtocolName = "eth"
+const ProtocolName = "wan"
 
 // ProtocolVersions are the supported versions of the `eth` protocol (first
 // is primary).
-var ProtocolVersions = []uint{ETH66, ETH65}
-
+var ProtocolVersions = []uint{ ETH65,ETH63, ETH62}
 // protocolLengths are the number of implemented message corresponding to
 // different protocol versions.
-var protocolLengths = map[uint]uint64{ETH66: 17, ETH65: 17}
+var protocolLengths = map[uint]uint64{ ETH65: 17,ETH63: 17,ETH62: 8}
 
 // maxMessageSize is the maximum cap on the size of a protocol message.
 const maxMessageSize = 10 * 1024 * 1024
 
 const (
-	// Protocol messages in eth/64
+	// Protocol messages in eth/64 == 63
 	StatusMsg          = 0x00
 	NewBlockHashesMsg  = 0x01
 	TransactionsMsg    = 0x02

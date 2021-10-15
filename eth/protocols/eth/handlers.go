@@ -318,6 +318,9 @@ func handleBlockHeaders(backend Backend, msg Decoder, peer *Peer) error {
 	if err := msg.Decode(res); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
 	}
+	//if len(res) != 0 {
+	//	fmt.Println("got headers: "len(res))
+	//}
 	return backend.Handle(peer, res)
 }
 

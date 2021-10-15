@@ -22,8 +22,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// LegacyTx is the transaction data of regular Ethereum transactions.
-type LegacyTx struct {
+// WanLegacyTx is the transaction data of regular Ethereum transactions.
+type WanLegacyTx struct {
+	Txtype 	 uint64
 	Nonce    uint64          // nonce of sender account
 	GasPrice *big.Int        // wei per gas
 	Gas      uint64          // gas limit
@@ -35,8 +36,9 @@ type LegacyTx struct {
 
 // NewTransaction creates an unsigned legacy transaction.
 // Deprecated: use NewTx instead.
-func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	return NewTx(&LegacyTx{
+func NewWanTransaction(txtype uint64, nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
+	return NewTx(&WanLegacyTx{
+		Txtype:   txtype,
 		Nonce:    nonce,
 		To:       &to,
 		Value:    amount,
@@ -48,8 +50,9 @@ func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit u
 
 // NewContractCreation creates an unsigned legacy transaction.
 // Deprecated: use NewTx instead.
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	return NewTx(&LegacyTx{
+func NewWanContractCreation(txtype uint64, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
+	return NewTx(&WanLegacyTx{
+		Txtype:   txtype,
 		Nonce:    nonce,
 		Value:    amount,
 		Gas:      gasLimit,
@@ -59,8 +62,8 @@ func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPric
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *LegacyTx) copy() TxData {
-	cpy := &LegacyTx{
+func (tx *WanLegacyTx) copy() TxData {
+	cpy := &WanLegacyTx{
 		Nonce: tx.Nonce,
 		To:    tx.To, // TODO: copy pointed-to address
 		Data:  common.CopyBytes(tx.Data),
@@ -92,22 +95,22 @@ func (tx *LegacyTx) copy() TxData {
 
 // accessors for innerTx.
 
-func (tx *LegacyTx) txType() byte           {
-	return LegacyTxType
+func (tx *WanLegacyTx) txType() byte           {
+	return byte(tx.Txtype)
 }
-func (tx *LegacyTx) chainID() *big.Int      { return deriveChainId(tx.V) }
-func (tx *LegacyTx) accessList() AccessList { return nil }
-func (tx *LegacyTx) data() []byte           { return tx.Data }
-func (tx *LegacyTx) gas() uint64            { return tx.Gas }
-func (tx *LegacyTx) gasPrice() *big.Int     { return tx.GasPrice }
-func (tx *LegacyTx) value() *big.Int        { return tx.Value }
-func (tx *LegacyTx) nonce() uint64          { return tx.Nonce }
-func (tx *LegacyTx) to() *common.Address    { return tx.To }
+func (tx *WanLegacyTx) chainID() *big.Int      { return deriveChainId(tx.V) }
+func (tx *WanLegacyTx) accessList() AccessList { return nil }
+func (tx *WanLegacyTx) data() []byte           { return tx.Data }
+func (tx *WanLegacyTx) gas() uint64            { return tx.Gas }
+func (tx *WanLegacyTx) gasPrice() *big.Int     { return tx.GasPrice }
+func (tx *WanLegacyTx) value() *big.Int        { return tx.Value }
+func (tx *WanLegacyTx) nonce() uint64          { return tx.Nonce }
+func (tx *WanLegacyTx) to() *common.Address    { return tx.To }
 
-func (tx *LegacyTx) rawSignatureValues() (v, r, s *big.Int) {
+func (tx *WanLegacyTx) rawSignatureValues() (v, r, s *big.Int) {
 	return tx.V, tx.R, tx.S
 }
 
-func (tx *LegacyTx) setSignatureValues(chainID, v, r, s *big.Int) {
+func (tx *WanLegacyTx) setSignatureValues(chainID, v, r, s *big.Int) {
 	tx.V, tx.R, tx.S = v, r, s
 }

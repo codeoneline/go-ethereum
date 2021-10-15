@@ -52,7 +52,7 @@ const (
 // Receipt represents the results of a transaction.
 type Receipt struct {
 	// Consensus fields: These fields are defined by the Yellow Paper
-	Type              uint8  `json:"type,omitempty"`
+	//Type              uint8  `json:"type,omitempty"`  // TODO_MERGE
 	PostState         []byte `json:"root"`
 	Status            uint64 `json:"status"`
 	CumulativeGasUsed uint64 `json:"cumulativeGasUsed" gencodec:"required"`
@@ -67,9 +67,9 @@ type Receipt struct {
 
 	// Inclusion information: These fields provide information about the inclusion of the
 	// transaction corresponding to this receipt.
-	BlockHash        common.Hash `json:"blockHash,omitempty"`
-	BlockNumber      *big.Int    `json:"blockNumber,omitempty"`
-	TransactionIndex uint        `json:"transactionIndex"`
+	//BlockHash        common.Hash `json:"blockHash,omitempty"`
+	//BlockNumber      *big.Int    `json:"blockNumber,omitempty"`
+	//TransactionIndex uint        `json:"transactionIndex"`
 }
 
 type receiptMarshaling struct {
@@ -122,7 +122,7 @@ type v3StoredReceiptRLP struct {
 // Deprecated: create receipts using a struct literal instead.
 func NewReceipt(root []byte, failed bool, cumulativeGasUsed uint64) *Receipt {
 	r := &Receipt{
-		Type:              LegacyTxType,
+		//Type:              LegacyTxType,
 		PostState:         common.CopyBytes(root),
 		CumulativeGasUsed: cumulativeGasUsed,
 	}
@@ -138,21 +138,22 @@ func NewReceipt(root []byte, failed bool, cumulativeGasUsed uint64) *Receipt {
 // into an RLP stream. If no post state is present, byzantium fork is assumed.
 func (r *Receipt) EncodeRLP(w io.Writer) error {
 	data := &receiptRLP{r.statusEncoding(), r.CumulativeGasUsed, r.Bloom, r.Logs}
-	if r.Type == LegacyTxType {
-		return rlp.Encode(w, data)
-	}
-	// It's an EIP-2718 typed TX receipt.
-	if r.Type != AccessListTxType {
-		return ErrTxTypeNotSupported
-	}
-	buf := encodeBufferPool.Get().(*bytes.Buffer)
-	defer encodeBufferPool.Put(buf)
-	buf.Reset()
-	buf.WriteByte(r.Type)
-	if err := rlp.Encode(buf, data); err != nil {
-		return err
-	}
-	return rlp.Encode(w, buf.Bytes())
+	return rlp.Encode(w, data)
+	//if r.Type == LegacyTxType {
+	//	return rlp.Encode(w, data)
+	//}
+	//// It's an EIP-2718 typed TX receipt.
+	//if r.Type != AccessListTxType {
+	//	return ErrTxTypeNotSupported
+	//}
+	//buf := encodeBufferPool.Get().(*bytes.Buffer)
+	//defer encodeBufferPool.Put(buf)
+	//buf.Reset()
+	//buf.WriteByte(r.Type)
+	//if err := rlp.Encode(buf, data); err != nil {
+	//	return err
+	//}
+	//return rlp.Encode(w, buf.Bytes())
 }
 
 // DecodeRLP implements rlp.Decoder, and loads the consensus fields of a receipt
@@ -168,7 +169,7 @@ func (r *Receipt) DecodeRLP(s *rlp.Stream) error {
 		if err := s.Decode(&dec); err != nil {
 			return err
 		}
-		r.Type = LegacyTxType
+		//r.Type = LegacyTxType
 		return r.setFromRLP(dec)
 	case kind == rlp.String:
 		// It's an EIP-2718 typed tx receipt.
@@ -179,15 +180,20 @@ func (r *Receipt) DecodeRLP(s *rlp.Stream) error {
 		if len(b) == 0 {
 			return errEmptyTypedReceipt
 		}
-		r.Type = b[0]
-		if r.Type == AccessListTxType {
-			var dec receiptRLP
-			if err := rlp.DecodeBytes(b[1:], &dec); err != nil {
-				return err
-			}
-			return r.setFromRLP(dec)
+		//r.Type = b[0]
+		//if r.Type == AccessListTxType {
+		//	var dec receiptRLP
+		//	if err := rlp.DecodeBytes(b[1:], &dec); err != nil {
+		//		return err
+		//	}
+		//	return r.setFromRLP(dec)
+		//}
+		//return ErrTxTypeNotSupported
+		var dec receiptRLP
+		if err := rlp.DecodeBytes(b[:], &dec); err != nil {
+			return err
 		}
-		return ErrTxTypeNotSupported
+		return r.setFromRLP(dec)
 	default:
 		return rlp.ErrExpectedList
 	}
@@ -340,17 +346,19 @@ func (rs Receipts) Len() int { return len(rs) }
 func (rs Receipts) EncodeIndex(i int, w *bytes.Buffer) {
 	r := rs[i]
 	data := &receiptRLP{r.statusEncoding(), r.CumulativeGasUsed, r.Bloom, r.Logs}
-	switch r.Type {
-	case LegacyTxType:
-		rlp.Encode(w, data)
-	case AccessListTxType:
-		w.WriteByte(AccessListTxType)
-		rlp.Encode(w, data)
-	default:
-		// For unsupported types, write nothing. Since this is for
-		// DeriveSha, the error will be caught matching the derived hash
-		// to the block.
-	}
+	rlp.Encode(w, data)
+
+	//switch r.Type {
+	//case LegacyTxType:
+	//	rlp.Encode(w, data)
+	//case AccessListTxType:
+	//	w.WriteByte(AccessListTxType)
+	//	rlp.Encode(w, data)
+	//default:
+	//	// For unsupported types, write nothing. Since this is for
+	//	// DeriveSha, the error will be caught matching the derived hash
+	//	// to the block.
+	//}
 }
 
 // DeriveFields fills the receipts with their computed fields based on consensus
@@ -364,13 +372,13 @@ func (r Receipts) DeriveFields(config *params.ChainConfig, hash common.Hash, num
 	}
 	for i := 0; i < len(r); i++ {
 		// The transaction type and hash can be retrieved from the transaction itself
-		r[i].Type = txs[i].Type()
+		//r[i].Type = txs[i].Type()
 		r[i].TxHash = txs[i].Hash()
 
 		// block location fields
-		r[i].BlockHash = hash
-		r[i].BlockNumber = new(big.Int).SetUint64(number)
-		r[i].TransactionIndex = uint(i)
+		//r[i].BlockHash = hash
+		//r[i].BlockNumber = new(big.Int).SetUint64(number)
+		//r[i].TransactionIndex = uint(i)
 
 		// The contract address can be derived from the transaction itself
 		if txs[i].To() == nil {

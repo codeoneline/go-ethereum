@@ -470,7 +470,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			d.mux.Post(DoneEvent{latest})
 		}
 	}()
-	if p.version < eth.ETH65 {
+	if p.version < eth.ETH63 { // MERGETODO
 		return fmt.Errorf("%w: advertized %d < required %d", errTooOld, p.version, eth.ETH65)
 	}
 	mode := d.getMode()
@@ -692,6 +692,7 @@ func (d *Downloader) fetchHead(p *peerConnection) (head *types.Header, pivot *ty
 			// and request. If only 1 header was returned, make sure there's no pivot
 			// or there was not one requested.
 			head := headers[0]
+			fmt.Println("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGggot header.")
 			if (mode == FastSync || mode == LightSync) && head.Number.Uint64() < d.checkpoint {
 				return nil, nil, fmt.Errorf("%w: remote head %d below checkpoint %d", errUnsyncedPeer, head.Number, d.checkpoint)
 			}

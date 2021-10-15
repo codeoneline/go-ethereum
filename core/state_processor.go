@@ -111,7 +111,8 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, bc ChainCon
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used
 	// by the tx.
-	receipt := &types.Receipt{Type: tx.Type(), PostState: root, CumulativeGasUsed: *usedGas}
+	//receipt := &types.Receipt{Type: tx.Type(), PostState: root, CumulativeGasUsed: *usedGas}
+	receipt := &types.Receipt{ PostState: root, CumulativeGasUsed: *usedGas}
 	if result.Failed() {
 		receipt.Status = types.ReceiptStatusFailed
 	} else {
@@ -128,9 +129,9 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, bc ChainCon
 	// Set the receipt logs and create the bloom filter.
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-	receipt.BlockHash = statedb.BlockHash()
-	receipt.BlockNumber = header.Number
-	receipt.TransactionIndex = uint(statedb.TxIndex())
+	//receipt.BlockHash = statedb.BlockHash()
+	//receipt.BlockNumber = header.Number
+	//receipt.TransactionIndex = uint(statedb.TxIndex())
 	return receipt, err
 }
 

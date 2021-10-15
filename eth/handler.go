@@ -259,10 +259,19 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 		td      = h.chain.GetTd(hash, number)
 	)
 	forkID := forkid.NewID(h.chain.Config(), h.chain.Genesis().Hash(), h.chain.CurrentHeader().Number.Uint64())
-	if err := peer.Handshake(h.networkID, td, hash, genesis.Hash(), forkID, h.forkFilter); err != nil {
-		peer.Log().Debug("Ethereum handshake failed", "err", err)
-		return err
+
+	if peer.Version() <= 63 { // TODOMERGE
+		if err := peer.Handshake63(h.networkID, td, hash, genesis.Hash(), forkID, h.forkFilter); err != nil {
+			peer.Log().Debug("Ethereum Handshake63 failed", "err", err)
+			return err
+		}
+	} else {
+		if err := peer.Handshake(h.networkID, td, hash, genesis.Hash(), forkID, h.forkFilter); err != nil {
+			peer.Log().Debug("Ethereum handshake failed", "err", err)
+			return err
+		}
 	}
+
 	reject := false // reserved peer slots
 	if atomic.LoadUint32(&h.snapSync) == 1 {
 		if snap == nil {

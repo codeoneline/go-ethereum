@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package eth
 
 import (
@@ -26,33 +10,30 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 )
 
-const (
-	// handshakeTimeout is the maximum allowed time for the `eth` handshake to
-	// complete before dropping the connection.= as malicious.
-	handshakeTimeout = 5 * time.Second
-)
+
 
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash, forkID forkid.ID, forkFilter forkid.Filter) error {
+func (p *Peer) Handshake63(network uint64, td *big.Int, head common.Hash, genesis common.Hash, forkID forkid.ID, forkFilter forkid.Filter) error {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 
-	var status StatusPacket // safe to read after two values have been receive	d from errc
+	var status StatusData // safe to read after two values have been receive	d from errc
 
 	go func() {
-		errc <- p2p.Send(p.rw, StatusMsg, &StatusPacket{
+		errc <- p2p.Send(p.rw, StatusMsg, &StatusData{
 			ProtocolVersion: uint32(p.version),
 			NetworkID:       network,
 			TD:              td,
 			Head:            head,
 			Genesis:         genesis,
-			ForkID:          forkID,
 		})
 	}()
 	go func() {
-		errc <- p.readStatus(network, &status, genesis, forkFilter)
+		errc <- p.readStatusData(network, &status, genesis, forkFilter)
 	}()
+
+
 	timeout := time.NewTimer(handshakeTimeout)
 	defer timeout.Stop()
 	for i := 0; i < 2; i++ {
@@ -75,8 +56,8 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 	return nil
 }
 
-// readStatus reads the remote handshake message.
-func (p *Peer) readStatus(network uint64, status *StatusPacket, genesis common.Hash, forkFilter forkid.Filter) error {
+// readStatus reads the remote handshake message. eth63
+func (p *Peer) readStatusData(network uint64, status *StatusData, genesis common.Hash, forkFilter forkid.Filter) error {
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -100,8 +81,6 @@ func (p *Peer) readStatus(network uint64, status *StatusPacket, genesis common.H
 	if status.Genesis != genesis {
 		return fmt.Errorf("%w: %x (!= %x)", errGenesisMismatch, status.Genesis, genesis)
 	}
-	if err := forkFilter(status.ForkID); err != nil {
-		return fmt.Errorf("%w: %v", errForkIDRejected, err)
-	}
+
 	return nil
 }

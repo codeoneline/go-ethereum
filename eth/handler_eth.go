@@ -135,9 +135,9 @@ func (h *ethHandler) handleHeaders(peer *eth.Peer, headers []*types.Header) erro
 			p.syncDrop = nil
 
 			// Validate the header and either drop the peer or continue
-			if headers[0].Hash() != h.checkpointHash {
-				return errors.New("checkpoint hash mismatch")
-			}
+			//if headers[0].Hash() != h.checkpointHash {  // MERGETODO
+			//	return errors.New("checkpoint hash mismatch")
+			//}
 			return nil
 		}
 		// Otherwise if it's a whitelisted block, validate against the set

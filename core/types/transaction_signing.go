@@ -319,6 +319,7 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
+		tx.Type(), // TODO MERGE gwan
 		tx.Nonce(),
 		tx.GasPrice(),
 		tx.Gas(),

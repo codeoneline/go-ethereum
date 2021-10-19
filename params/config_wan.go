@@ -22,6 +22,37 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+const MainnetPow2PosUpgradeBlockNumber = 4046000
+const TestnetPow2PosUpgradeBlockNumber = 3560000
+const InternalPow2PosUpgradeBlockNumber = 200
+
+const MAINNET_CHAIN_ID = 1
+const TESTNET_CHAIN_ID = 3
+
+// INTERNAL_CHAIN_ID is Private chain pow -> pos mode chainId
+const INTERNAL_CHAIN_ID = 4
+
+// PLUTO_CHAIN_ID is Private chain pos mode chainId
+const PLUTO_CHAIN_ID = 6
+
+// PLUTODEV_CHAIN_ID is Private chain pos mode single node chainId
+const PLUTODEV_CHAIN_ID = 6
+
+// JUPITER_MAINNET_CHAIN_ID is mainnet chainId after jupiter fork
+const JUPITER_MAINNET_CHAIN_ID = 888
+
+// JUPITER_TESTNET_CHAIN_ID is testnet chainId after jupiter fork
+const JUPITER_TESTNET_CHAIN_ID = 999
+const JUPITER_INTERNAL_CHAIN_ID = 777
+//const JUPITER_PLUTO_CHAIN_ID = 6
+const JUPITER_PLUTO_CHAIN_ID = 666
+//const JUPITER_PLUTODEV_CHAIN_ID = 6
+const JUPITER_PLUTODEV_CHAIN_ID = 555
+
+// NOT_JUPITER_CHAIN_ID is used for compare
+const NOT_JUPITER_CHAIN_ID = 0xffffffff
+
+
 // Genesis hashes to enforce below configs on.
 var (
 	MainnetGenesisHash = common.HexToHash("0x0376899c001618fc7d5ab4f31cfd7f57ca3a896ccc1581a57d8f129ecf40b840") // Mainnet genesis hash to enforce below configs on

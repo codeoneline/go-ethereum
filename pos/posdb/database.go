@@ -13,7 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/ethdb/leveldb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/pos/posconfig"
 	"github.com/ethereum/go-ethereum/pos/util/convert"
@@ -21,7 +21,7 @@ import (
 
 //Db is the wanpos leveldb class
 type Db struct {
-	db *ethdb.LDBDatabase
+	db *leveldb.Database
 }
 
 var (
@@ -30,6 +30,11 @@ var (
 
 	mu sync.RWMutex
 )
+
+const (
+	GWAN_DB_NAMESPACE="GWAN_DB_NAMESPACE"
+)
+
 
 func NewDb(fileName string) *Db {
 	mu.Lock()
@@ -110,7 +115,7 @@ func (s *Db) DbInit(dbPath string) {
 		inst.DbClose()
 	}
 
-	s.db, err = ethdb.NewLDBDatabase(dirname, 0, 256)
+	s.db, err = leveldb.New(dirname, 0, 256,GWAN_DB_NAMESPACE,false)
 	if err != nil {
 		panic("failed to create wanpos_tmpdb database: " + dbPath + "_" + err.Error())
 	}

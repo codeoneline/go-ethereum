@@ -46,3 +46,5 @@ func (a *Address) Set(other Address) {
 	}
 }
 
+func StringToAddress(s string) Address { return BytesToAddress([]byte(s)) }
+

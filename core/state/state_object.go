@@ -125,6 +125,9 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 		originStorage:  make(Storage),
 		pendingStorage: make(Storage),
 		dirtyStorage:   make(Storage),
+		cachedStorage:          make(Storage),
+		cachedStorageByteArray: make(StorageByteArray),
+		dirtyStorageByteArray:  make(StorageByteArray),
 	}
 }
 

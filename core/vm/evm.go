@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"bytes"
 	"errors"
 	"math/big"
 	"sync/atomic"
@@ -221,11 +222,8 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 	p, isPrecompile := evm.precompile(addr)
 	if !isPrecompile {
-		if isWanchainPrecompiled(addr) {
-			isPrecompile = true
-			contract := NewContract(caller, AccountRef(addr), value, gas)
-			p = &wanCoinSC{contract, evm}
-		}
+		contract := NewContract(caller, AccountRef(addr), value, gas)
+		p, isPrecompile = isWanchainPrecompiled(addr, contract, evm)
 	}
 
 	if !evm.StateDB.Exist(addr) {
@@ -239,7 +237,9 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
-	evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+	if !bytes.Equal(addr.Bytes(), wanCoinPrecompileAddr.Bytes()) && !bytes.Equal(addr.Bytes(), wanStampPrecompileAddr.Bytes()) {
+		evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+	}
 
 	// Capture the tracer start/end events in debug mode
 	if evm.vmConfig.Debug && evm.depth == 0 {

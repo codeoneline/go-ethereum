@@ -116,7 +116,7 @@ const (
 
 )
 
-func init() {
+func initWan() {
 	if errCoinSCInit != nil || errStampSCInit != nil {
 		panic("err in coin sc initialize or stamp error initialize ")
 	}
@@ -191,8 +191,19 @@ func init() {
 	WanCoinValueSet[cval50000.Text(16)] = Wancoin50000
 
 }
-func isWanchainPrecompiled(addr common.Address) bool {
-	return bytes.Equal(addr.Bytes(), wanCoinPrecompileAddr.Bytes()) || bytes.Equal(addr.Bytes(), wanStampPrecompileAddr.Bytes())
+func isWanchainPrecompiled(addr common.Address, contract *Contract, evm *EVM) (PrecompiledContract, bool) {
+	if bytes.Equal(addr.Bytes(), wanCoinPrecompileAddr.Bytes()) || bytes.Equal(addr.Bytes(), wanStampPrecompileAddr.Bytes()) {
+		switch addr {
+		case wanCoinPrecompileAddr:
+			return &wanCoinSC{contract, evm}, true
+		case wanStampPrecompileAddr:
+			return &wanchainStampSC{contract, evm}, true
+		default:
+			return nil, false
+		}
+	}
+	return nil, false
+
 }
 
 func (evm *EVM) precompileWan(addr common.Address, contract *Contract, env *EVM) (PrecompiledContract, bool) {
@@ -212,14 +223,17 @@ func (evm *EVM) precompileWan(addr common.Address, contract *Contract, env *EVM)
 }
 
 
-type wanchainStampSC struct{}
+type wanchainStampSC struct{
+	contract *Contract
+	evm *EVM
+}
 
 func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
 	// ota balance store gas + ota wanaddr store gas
 	return params.SstoreSetGas * 2
 }
 
-func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM) ([]byte, error) {
+func (c *wanchainStampSC) Run(in []byte) ([]byte, error) {
 	if len(in) < 4 {
 		return nil, errParameters
 	}
@@ -228,7 +242,7 @@ func (c *wanchainStampSC) Run(in []byte, contract *Contract, env *EVM) ([]byte, 
 	copy(methodId[:], in[:4])
 
 	if methodId == stBuyId {
-		return c.buyStamp(in[4:], contract, env)
+		return c.buyStamp(in[4:], c.contract, c.evm)
 	}
 
 	return nil, errMethodId

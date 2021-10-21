@@ -397,6 +397,11 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	return bc, nil
 }
 
+// add by Jacob
+func (bc *BlockChain) GetHc() *HeaderChain {
+	return bc.hc
+}
+
 // GetVMConfig returns the block chain VM config.
 func (bc *BlockChain) GetVMConfig() *vm.Config {
 	return &bc.vmConfig

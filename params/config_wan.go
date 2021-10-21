@@ -142,4 +142,32 @@ var (
 			},
 		}
 	*/
+
+	// AllProtocolChanges contains every protocol change (EIPs)
+	// introduced and accepted by the Ethereum core developers.
+	//
+	// This configuration is intentionally not using keyed fields.
+	// This configuration must *always* have all forks enabled, which
+	// means that all fields must be set at all times. This forces
+	// anyone adding flags to the config to also have to set these
+	// fields.
+	//AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(100), false, new(EthashConfig), nil, nil}
+	//
+	//TestChainConfig = &ChainConfig{
+	//	ChainId:        big.NewInt(MAINNET_CHAIN_ID),
+	//	ByzantiumBlock: big.NewInt(0),
+	//	Ethash:         new(EthashConfig),
+	//	PosFirstBlock:  big.NewInt(TestnetPow2PosUpgradeBlockNumber), // set as n * epoch_length
+	//	IsPosActive:    false,
+	//}
+	//
+	//TestRules = TestChainConfig.Rules(new(big.Int))
+
+	noStaking = false
 )
+
+
+func IsNoStaking() bool {
+	return noStaking
+}
+

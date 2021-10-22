@@ -17,7 +17,7 @@
 package state
 
 import (
-
+	"bytes"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -61,24 +61,20 @@ type stateObject struct {
 	deleted   bool
 
 	// new
-	cachedStorageByteArray StorageByteArray
 	dirtyStorageByteArray  StorageByteArray
-	cachedStorage Storage // Storage entry cache to avoid duplicate reads
-
-	touched   bool
-	onDirty   func(addr common.Address) // Callback method to mark a state object newly dirty
+	pendingStorageByteArray  StorageByteArray
 }
 
 
 func (self *stateObject) GetStateByteArray(db Database, key common.Hash) []byte {
-	value, exists := self.cachedStorageByteArray[key]
+	value, exists := self.dirtyStorageByteArray[key]
 	if exists {
 		return value
 	}
 	// Load from DB in case it is missing.
 	value, err := self.getTrie(db).TryGet(key[:])
 	if err == nil && len(value) != 0 {
-		self.cachedStorageByteArray[key] = value
+		self.dirtyStorageByteArray[key] = value
 	}
 	return value
 }
@@ -96,13 +92,7 @@ func (self *stateObject) SetStateByteArray(db Database, key common.Hash, value [
 
 
 func (self *stateObject) setStateByteArray(key common.Hash, value []byte) {
-	self.cachedStorageByteArray[key] = value
 	self.dirtyStorageByteArray[key] = value
-
-	if self.onDirty != nil {
-		self.onDirty(self.Address())
-		self.onDirty = nil
-	}
 }
 
 
@@ -113,4 +103,31 @@ func (self StorageByteArray) Copy() StorageByteArray {
 	}
 
 	return cpy
+}
+
+func (s *stateObject) deepCopy(db *StateDB) *stateObject {
+	stateObject := newObject(db, s.address, s.data)
+	if s.trie != nil {
+		stateObject.trie = db.db.CopyTrie(s.trie)
+	}
+	stateObject.code = s.code
+	stateObject.dirtyStorage = s.dirtyStorage.Copy()
+	stateObject.originStorage = s.originStorage.Copy()
+	stateObject.pendingStorage = s.pendingStorage.Copy()
+	stateObject.suicided = s.suicided
+	stateObject.dirtyCode = s.dirtyCode
+	stateObject.deleted = s.deleted
+
+	stateObject.dirtyStorageByteArray = s.dirtyStorageByteArray.Copy()
+	stateObject.pendingStorageByteArray = s.pendingStorageByteArray.Copy()
+
+	return stateObject
+}
+// empty returns whether the account is considered empty.
+func (s *stateObject) empty() bool {
+	emptyHash := common.Hash{}
+	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 &&
+		(bytes.Equal(s.data.CodeHash, emptyCodeHash) || bytes.Equal(s.data.CodeHash, emptyHash[:])) &&
+		(s.data.Root == emptyHash || s.data.Root == emptyRoot) &&
+		len(s.dirtyStorage) == 0 && len(s.dirtyStorageByteArray) == 0
 }

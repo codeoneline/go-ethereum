@@ -93,9 +93,9 @@ func (s Storage) Copy() Storage {
 //}
 
 // empty returns whether the account is considered empty.
-func (s *stateObject) empty() bool {
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
-}
+//func (s *stateObject) empty() bool {
+//	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+//}
 
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
@@ -125,9 +125,8 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 		originStorage:  make(Storage),
 		pendingStorage: make(Storage),
 		dirtyStorage:   make(Storage),
-		cachedStorage:          make(Storage),
-		cachedStorageByteArray: make(StorageByteArray),
 		dirtyStorageByteArray:  make(StorageByteArray),
+		pendingStorageByteArray:make(StorageByteArray),
 	}
 }
 
@@ -326,6 +325,15 @@ func (s *stateObject) finalise(prefetch bool) {
 	if len(s.dirtyStorage) > 0 {
 		s.dirtyStorage = make(Storage)
 	}
+
+
+	for key, value := range s.dirtyStorageByteArray {
+		s.pendingStorageByteArray[key] = value
+	}
+	if len(s.dirtyStorageByteArray) > 0 {
+		s.dirtyStorageByteArray = make(StorageByteArray)
+	}
+
 }
 
 // updateTrie writes cached storage modifications into the object's storage trie.
@@ -333,7 +341,7 @@ func (s *stateObject) finalise(prefetch bool) {
 func (s *stateObject) updateTrie(db Database) Trie {
 	// Make sure all dirty slots are finalized into the pending storage area
 	s.finalise(false) // Don't prefetch any more, pull directly if need be
-	if len(s.pendingStorage) == 0 {
+	if len(s.pendingStorage) == 0  && len(s.pendingStorageByteArray) == 0 {
 		return s.trie
 	}
 	// Track the amount of time wasted on updating the storage trie
@@ -375,6 +383,21 @@ func (s *stateObject) updateTrie(db Database) Trie {
 		}
 		usedStorage = append(usedStorage, common.CopyBytes(key[:])) // Copy needed for closure
 	}
+
+
+	for key, value := range s.pendingStorageByteArray {
+		if len(value) == 0 {
+			s.setError(tr.TryDelete(key[:]))
+		} else {
+			s.setError(tr.TryUpdate(key[:], value))
+
+		}
+	}
+	if len(s.pendingStorageByteArray) > 0 {
+		s.pendingStorageByteArray = make(StorageByteArray)
+	}
+
+
 	if s.db.prefetcher != nil {
 		s.db.prefetcher.used(s.data.Root, usedStorage)
 	}
@@ -456,20 +479,20 @@ func (s *stateObject) setBalance(amount *big.Int) {
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (s *stateObject) ReturnGas(gas *big.Int) {}
 
-func (s *stateObject) deepCopy(db *StateDB) *stateObject {
-	stateObject := newObject(db, s.address, s.data)
-	if s.trie != nil {
-		stateObject.trie = db.db.CopyTrie(s.trie)
-	}
-	stateObject.code = s.code
-	stateObject.dirtyStorage = s.dirtyStorage.Copy()
-	stateObject.originStorage = s.originStorage.Copy()
-	stateObject.pendingStorage = s.pendingStorage.Copy()
-	stateObject.suicided = s.suicided
-	stateObject.dirtyCode = s.dirtyCode
-	stateObject.deleted = s.deleted
-	return stateObject
-}
+//func (s *stateObject) deepCopy(db *StateDB) *stateObject {
+//	stateObject := newObject(db, s.address, s.data)
+//	if s.trie != nil {
+//		stateObject.trie = db.db.CopyTrie(s.trie)
+//	}
+//	stateObject.code = s.code
+//	stateObject.dirtyStorage = s.dirtyStorage.Copy()
+//	stateObject.originStorage = s.originStorage.Copy()
+//	stateObject.pendingStorage = s.pendingStorage.Copy()
+//	stateObject.suicided = s.suicided
+//	stateObject.dirtyCode = s.dirtyCode
+//	stateObject.deleted = s.deleted
+//	return stateObject
+//}
 
 //
 // Attribute accessors

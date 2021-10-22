@@ -33,6 +33,6 @@ func (ch storageByteArrayChange) revert(s *StateDB) {
 
 
 func (ch storageByteArrayChange) dirtied() *common.Address {
-	return nil
+	return ch.account
 }
 

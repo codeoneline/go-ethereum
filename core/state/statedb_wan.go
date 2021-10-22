@@ -55,7 +55,7 @@ func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key comm
 		}
 
 		// When iterating over the storage check the cache first
-		for h, value := range so.cachedStorageByteArray {
+		for h, value := range so.dirtyStorageByteArray {
 			if !cb(h, value) {
 				return
 			}
@@ -65,7 +65,7 @@ func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key comm
 		for it.Next() {
 			// ignore cached values
 			key := common.BytesToHash(db.trie.GetKey(it.Key))
-			if _, ok := so.cachedStorageByteArray[key]; !ok {
+			if _, ok := so.dirtyStorageByteArray[key]; !ok {
 				if !cb(key, it.Value) {
 					return
 				}
@@ -83,7 +83,7 @@ func (db *StateDB) ForEachStorageByteArrayBeforeFork(addr common.Address, cb fun
 	}
 
 	// When iterating over the storage check the cache first
-	for h, value := range so.cachedStorageByteArray {
+	for h, value := range so.dirtyStorageByteArray {
 		if !cb(h, value) {
 			return
 		}
@@ -93,7 +93,7 @@ func (db *StateDB) ForEachStorageByteArrayBeforeFork(addr common.Address, cb fun
 	for it.Next() {
 		// ignore cached values
 		key := common.BytesToHash(db.trie.GetKey(it.Key))
-		if _, ok := so.cachedStorage[key]; !ok {
+		if _, ok := so.dirtyStorage[key]; !ok {
 			if !cb(key, it.Value) {
 				return
 			}

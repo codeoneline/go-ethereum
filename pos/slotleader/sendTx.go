@@ -25,7 +25,8 @@ func (s *SLS) sendSlotTx(payload []byte, posSender SendTxFn) error {
 
 	to := vm.GetSlotLeaderSCAddress()
 	data := hexutil.Bytes(payload)
-	gas := core.IntrinsicGas(data, &to, true)
+	//gas := core.IntrinsicGas(data, &to, true)
+	gas := core.IntrinsicGas_gwan(data, &to, true)
 
 	arg := map[string]interface{}{}
 	arg["from"] = s.key.Address

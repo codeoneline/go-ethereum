@@ -39,7 +39,8 @@ func (s *SLS) getBlockChainHeight() uint64 {
 }
 
 func (s *SLS) getBlockTime(number uint64) uint64 {
-	return s.blockChain.GetBlockByNumber(number).Time().Uint64()
+	//return s.blockChain.GetBlockByNumber(number).Time().Uint64()
+	return s.blockChain.GetBlockByNumber(number).Time()
 }
 
 func (s *SLS) getEpochIDFromBlockNumber(number uint64) uint64 {

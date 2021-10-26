@@ -41,10 +41,10 @@ var (
 
 // Transaction types.
 const (
-	LegacyTxType = iota
-	WanLegacyTxType = 1
-	WanPrivTxType   = 6
-	WanPosTxType    = 7
+	LegacyTxType     = iota
+	WanLegacyTxType  = 1
+	WanPrivTxType    = 6
+	WanPosTxType     = 7
 	AccessListTxType = 9
 )
 
@@ -188,7 +188,7 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		var inner LegacyTx
 		err := rlp.DecodeBytes(b[:], &inner)
 		if err != nil {
-			fmt.Println("decodeTyped:", err )
+			fmt.Println("decodeTyped:", err)
 		}
 		return &inner, err
 	default:
@@ -508,6 +508,7 @@ type Message struct {
 	data       []byte
 	accessList AccessList
 	checkNonce bool
+	txType     uint64
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList AccessList, checkNonce bool) Message {
@@ -551,3 +552,5 @@ func (m Message) Nonce() uint64          { return m.nonce }
 func (m Message) Data() []byte           { return m.data }
 func (m Message) AccessList() AccessList { return m.accessList }
 func (m Message) CheckNonce() bool       { return m.checkNonce }
+
+func (m Message) TxType() uint64 { return m.txType }

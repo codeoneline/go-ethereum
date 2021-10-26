@@ -15,7 +15,7 @@ import (
 // Prepare a simulate stateDB ---------------------------------------------
 var (
 	db, _      = ethdb.NewMemDatabase()
-	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+	statedb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 )
 
 func TestRun(t *testing.T) {

@@ -24,7 +24,7 @@ import (
 
 // WanLegacyTx is the transaction data of regular Ethereum transactions.
 type WanLegacyTx struct {
-	Txtype 	 uint64
+	Txtype   uint64
 	Nonce    uint64          // nonce of sender account
 	GasPrice *big.Int        // wei per gas
 	Gas      uint64          // gas limit
@@ -35,7 +35,6 @@ type WanLegacyTx struct {
 }
 
 // NewTransaction creates an unsigned legacy transaction.
-// Deprecated: use NewTx instead.
 func NewWanTransaction(txtype uint64, nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
 	return NewTx(&WanLegacyTx{
 		Txtype:   txtype,
@@ -49,7 +48,6 @@ func NewWanTransaction(txtype uint64, nonce uint64, to common.Address, amount *b
 }
 
 // NewContractCreation creates an unsigned legacy transaction.
-// Deprecated: use NewTx instead.
 func NewWanContractCreation(txtype uint64, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
 	return NewTx(&WanLegacyTx{
 		Txtype:   txtype,
@@ -95,7 +93,7 @@ func (tx *WanLegacyTx) copy() TxData {
 
 // accessors for innerTx.
 
-func (tx *WanLegacyTx) txType() byte           {
+func (tx *WanLegacyTx) txType() byte {
 	return byte(tx.Txtype)
 }
 func (tx *WanLegacyTx) chainID() *big.Int      { return deriveChainId(tx.V) }

@@ -24,7 +24,6 @@ var (
 	s256AddPrecompileAddr       = common.BytesToAddress([]byte{66})
 	s256ScalarMulPrecompileAddr = common.BytesToAddress([]byte{67})
 
-
 	wanCoinPrecompileAddr  = common.BytesToAddress([]byte{100})
 	wanStampPrecompileAddr = common.BytesToAddress([]byte{200})
 
@@ -70,12 +69,23 @@ var (
 	randomBeaconPrecompileAddr = common.BytesToAddress(big.NewInt(610).Bytes())
 	PosControlPrecompileAddr   = common.BytesToAddress(big.NewInt(612).Bytes())
 
-	SolEnhancePrecompileAddr   = common.BytesToAddress(big.NewInt(616).Bytes())
-
+	SolEnhancePrecompileAddr = common.BytesToAddress(big.NewInt(616).Bytes())
 
 	// TODO: remove one?
 	RandomBeaconPrecompileAddr = randomBeaconPrecompileAddr
 	SlotLeaderPrecompileAddr   = slotLeaderPrecompileAddr
 )
 
+func IsPosPrecompiledAddr(addr *common.Address) bool {
+	if addr == nil {
+		return false
+	}
 
+	if (*addr) == slotLeaderPrecompileAddr ||
+		(*addr) == IncentivePrecompileAddr ||
+		(*addr) == randomBeaconPrecompileAddr {
+		return true
+	}
+
+	return false
+}

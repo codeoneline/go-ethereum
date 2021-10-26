@@ -128,7 +128,7 @@ type RandomBeacon struct {
 	epocher   *epochLeader.Epocher
 	rpcClient *rpc.Client
 
-	wg sync.WaitGroup
+	wg    sync.WaitGroup
 	mutex sync.Mutex
 
 	// based function
@@ -137,9 +137,9 @@ type RandomBeacon struct {
 	getEns              GetEnsFunc
 	getRBM              GetRBMFunc
 
-	fDoDKG1s			DoStageWork
-	fDoDKG2s			DoStageWork
-	fDoSIGs				DoStageWork
+	fDoDKG1s DoStageWork
+	fDoDKG2s DoStageWork
+	fDoSIGs  DoStageWork
 }
 
 var (
@@ -460,7 +460,7 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 		return nil, err
 	}
 
-	poly, err:= rbselection.RandPoly(int(posconfig.Cfg().PolymDegree), *s)
+	poly, err := rbselection.RandPoly(int(posconfig.Cfg().PolymDegree), *s)
 	if err != nil {
 		log.SyslogErr("dkg1, get rand poly fail", "err", err)
 		return nil, err
@@ -489,7 +489,7 @@ func (rb *RandomBeacon) generateDKG1(proposerId uint32) (*vm.RbDKG1FlatTxPayload
 		commitBytes[i] = commit[i].Marshal()
 	}
 
-	txPayload := vm.RbDKG1FlatTxPayload{EpochId:rb.epochId, ProposerId:proposerId, Commit:commitBytes}
+	txPayload := vm.RbDKG1FlatTxPayload{EpochId: rb.epochId, ProposerId: proposerId, Commit: commitBytes}
 
 	return &txPayload, nil
 }
@@ -580,7 +580,7 @@ func (rb *RandomBeacon) generateDKG2(proposerId uint32) (*vm.RbDKG2FlatTxPayload
 		proofBytes[i] = rbselection.ProofToProofFlat(&proof[i])
 	}
 
-	txPayload := vm.RbDKG2FlatTxPayload{EpochId:rb.epochId, ProposerId:proposerId, EnShare:enshareBytes, Proof:proofBytes}
+	txPayload := vm.RbDKG2FlatTxPayload{EpochId: rb.epochId, ProposerId: proposerId, EnShare: enshareBytes, Proof: proofBytes}
 
 	return &txPayload, nil
 }
@@ -660,7 +660,7 @@ func (rb *RandomBeacon) generateSIG(proposerId uint32) (*vm.RbSIGTxPayload, erro
 
 	// Compute signature share
 	gsigshare := new(bn256.G1).ScalarMult(gskshare, m)
-	return &vm.RbSIGTxPayload{EpochId:rb.epochId, ProposerId:proposerId, GSignShare:gsigshare}, nil
+	return &vm.RbSIGTxPayload{EpochId: rb.epochId, ProposerId: proposerId, GSignShare: gsigshare}, nil
 }
 
 func (rb *RandomBeacon) sendDKG1(payloadObj *vm.RbDKG1FlatTxPayload) error {
@@ -696,7 +696,8 @@ func (rb *RandomBeacon) sendSIG(payloadObj *vm.RbSIGTxPayload) error {
 func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	to := vm.GetRBAddress()
 	data := hexutil.Bytes(payload)
-	gas := core.IntrinsicGas(data, &to, true)
+	//gas := core.IntrinsicGas(data, &to, true)
+	gas := core.IntrinsicGas_gwan(data, &to, true)
 
 	arg := map[string]interface{}{}
 	arg["from"] = rb.getTxFrom()
@@ -705,7 +706,6 @@ func (rb *RandomBeacon) doSendRBTx(payload []byte) error {
 	arg["gas"] = (*hexutil.Big)(gas)
 	arg["txType"] = types.POS_TX
 	arg["data"] = data
-
 
 	log.SyslogInfo("do send rb tx", "payload len", len(payload))
 	go util.SendPosTx(rb.rpcClient, arg)
@@ -811,5 +811,3 @@ func getRBSIGTxPayloadBytes(payload *vm.RbSIGTxPayload) ([]byte, error) {
 
 	return ret, nil
 }
-
-

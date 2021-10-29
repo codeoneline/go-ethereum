@@ -223,7 +223,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	p, isPrecompile := evm.precompile(addr)
 	if !isPrecompile {
 		contract := NewContract(caller, AccountRef(addr), value, gas)
-		p, isPrecompile = isWanchainPrecompiled(addr, contract, evm)
+		p, isPrecompile = IsWanchainPrecompiled(addr, contract, evm)
 	}
 
 	if !evm.StateDB.Exist(addr) {

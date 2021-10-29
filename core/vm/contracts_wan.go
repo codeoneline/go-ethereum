@@ -191,7 +191,14 @@ func initWan() {
 	WanCoinValueSet[cval50000.Text(16)] = Wancoin50000
 
 }
-func isWanchainPrecompiled(addr common.Address, contract *Contract, evm *EVM) (PrecompiledContract, bool) {
+
+type PrecompiledContractWan interface {
+	RequiredGas(input []byte) uint64  // RequiredPrice calculates the contract gas use
+	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
+	ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error
+}
+
+func IsWanchainPrecompiled(addr common.Address, contract *Contract, evm *EVM) (PrecompiledContractWan, bool) {
 	if bytes.Equal(addr.Bytes(), wanCoinPrecompileAddr.Bytes()) || bytes.Equal(addr.Bytes(), wanStampPrecompileAddr.Bytes()) {
 		switch addr {
 		case wanCoinPrecompileAddr:

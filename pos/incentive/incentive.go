@@ -55,7 +55,7 @@ func Init(get GetStakerInfoFn, set SetStakerInfoFn, getRbAddr GetRandomProposerA
 }
 
 // Run is use to run the incentive should be called in Finalize of consensus
-func Run(chain consensus.ChainReader, stateDb *state.StateDB, epochID uint64, header *types.Header) bool {
+func Run(chain consensus.ChainHeaderReader, stateDb *state.StateDB, epochID uint64, header *types.Header) bool {
 	if chain == nil || stateDb == nil {
 		log.SyslogErr("incentive Run input param error (chain == nil || stateDb == nil)")
 		return false

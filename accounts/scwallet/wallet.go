@@ -687,6 +687,10 @@ func (w *Wallet) signHash(account accounts.Account, hash []byte) ([]byte, error)
 	return w.session.sign(path, hash)
 }
 
+func (w *Wallet) SignHash(account accounts.Account, hash []byte) ([]byte, error) {
+	return w.signHash(account, hash)
+}
+
 // SignTx requests the wallet to sign the given transaction.
 //
 // It looks up the account specified either solely via its address contained within,

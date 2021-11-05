@@ -201,7 +201,10 @@ type BlockChain struct {
 	running       int32          // 0 if chain is running, 1 when stopped
 	procInterrupt int32          // interrupt signaler for block processing
 
-	engine     consensus.Engine
+	engine    consensus.Engine
+	posEngine consensus.Engine
+	agents    []consensus.EngineSwitcher
+
 	validator  Validator // Block and state validator interface
 	prefetcher Prefetcher
 	processor  Processor // Block transaction processor interface
@@ -209,6 +212,21 @@ type BlockChain struct {
 
 	shouldPreserve  func(*types.Block) bool        // Function used to determine whether should preserve the given block.
 	terminateInsert func(common.Hash, uint64) bool // Testing hook used to terminate ancient receipt chain insertion.
+
+	badBlocks *lru.Cache // Bad block cache
+
+	CurrentEpochId int64
+
+	slotValidator Validator
+
+	checkCQStartSlot uint64 //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
+	checkCQBlk       *types.Block
+
+	cqCache    *lru.ARCCache
+	cqLastSlot uint64
+
+	stopSlot      uint64 //the best peer's latest slot
+	restartSucess bool
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -255,6 +273,9 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	if err != nil {
 		return nil, err
 	}
+
+	bc.RegisterSwitchEngine(bc.hc)
+
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
@@ -2514,4 +2535,12 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 // block processing has started while false means it has stopped.
 func (bc *BlockChain) SubscribeBlockProcessingEvent(ch chan<- bool) event.Subscription {
 	return bc.scope.Track(bc.blockProcFeed.Subscribe(ch))
+}
+
+func (bc *BlockChain) RegisterSwitchEngine(agent consensus.EngineSwitcher) {
+	bc.agents = append(bc.agents, agent)
+}
+
+func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher) {
+	bc.agents = append([]consensus.EngineSwitcher{agent}, bc.agents...)
 }

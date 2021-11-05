@@ -146,7 +146,7 @@ func getRandomProposerActivity(stateDb vm.StateDB, epochID uint64) ([]common.Add
 	return addrs, activity
 }
 
-func getSlotLeaderActivity(chain consensus.ChainReader, epochID uint64, slotCount int, headerInput *types.Header) ([]common.Address, []int, float64, int) {
+func getSlotLeaderActivity(chain consensus.ChainHeaderReader, epochID uint64, slotCount int, headerInput *types.Header) ([]common.Address, []int, float64, int) {
 	if chain == nil {
 		log.SyslogErr("getSlotLeaderActivity chain reader is empty.")
 		return []common.Address{}, []int{}, float64(0), 0

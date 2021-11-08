@@ -18,6 +18,7 @@ package core
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"math"
 	"math/big"
 	"sort"
@@ -566,6 +567,14 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
+	}
+	// Check precompile contracts transactions validation
+	if tx.To() != nil {
+		if p, isWanPrecompile := vm.IsWanchainPrecompiled(*tx.To(), nil, nil); isWanPrecompile {
+			if err = p.ValidTx(pool.currentState, pool.signer, tx); err != nil {
+				return  err
+			}
+		}
 	}
 	return nil
 }

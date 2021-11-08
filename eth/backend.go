@@ -1,4 +1,4 @@
-																															// Copyright 2014 The go-ethereum Authors
+// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/pluto"
 	"math/big"
 	"runtime"
 	"sync"
@@ -135,7 +136,6 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
-	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	if err := pruner.RecoverPruning(stack.ResolvePath(""), chainDb, stack.ResolvePath(config.TrieCleanCacheJournal)); err != nil {
 		log.Error("Failed to recover state", "error", err)
@@ -153,6 +153,16 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
 		bloomIndexer:      core.NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 		p2pServer:         stack.Server(),
+	}
+
+	log.Info("Initialised chain configuration", "config", chainConfig)
+	posEngine := pluto.New(chainConfig.Pluto, chainDb)
+
+	inPosStage := false
+	if chainConfig.IsPosActive ||
+		(core.PeekChainHeight(chainDb)+1) >= chainConfig.PosFirstBlock.Uint64() {
+		eth.engine = posEngine
+		inPosStage = true
 	}
 
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
@@ -194,6 +204,10 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	//eth.blockchain.RegisterSwitchEngine(eth)
+	eth.blockchain.PrependRegisterSwitchEngine(eth)
+
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -271,6 +285,14 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				"age", common.PrettyAge(t))
 		}
 	}
+
+	// jacob pos start
+	if inPosStage {
+		miner.PosInit(eth)
+		chainConfig.SetPosActive()
+	}
+	return eth, nil
+
 	return eth, nil
 }
 
@@ -564,4 +586,10 @@ func (s *Ethereum) Stop() error {
 	s.eventMux.Stop()
 
 	return nil
+}
+
+func (s *Ethereum) SwitchEngine(engine consensus.Engine) {
+	s.engine = engine
+
+	miner.PosInit(s)
 }

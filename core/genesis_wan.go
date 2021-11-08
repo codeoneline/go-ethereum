@@ -50,7 +50,6 @@ func DefaultGenesisBlock() *Genesis {
 		Alloc: jsonPrealloc(wanchainAllocJson),
 	}
 }
-/*
 // DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
@@ -62,6 +61,10 @@ func DefaultTestnetGenesisBlock() *Genesis {
 		Alloc:      jsonPrealloc(wanchainTestAllocJson),
 	}
 }
+
+
+/*
+
 
 // DefaultInternalGenesisBlock returns the Rinkeby network genesis block.
 func DefaultInternalGenesisBlock() *Genesis {

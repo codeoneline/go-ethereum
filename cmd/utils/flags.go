@@ -828,7 +828,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case ctx.GlobalIsSet(BootnodesFlag.Name):
 		urls = SplitAndTrim(ctx.GlobalString(BootnodesFlag.Name))
 	case ctx.GlobalBool(RopstenFlag.Name):
-		urls = params.RopstenBootnodes
+		urls = params.TestnetBootnodes
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		urls = params.RinkebyBootnodes
 	case ctx.GlobalBool(GoerliFlag.Name):
@@ -1606,7 +1606,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
-		cfg.Genesis = core.DefaultRopstenGenesisBlock()
+		cfg.Genesis = core.DefaultTestnetGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.RopstenGenesisHash)
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
@@ -1808,7 +1808,7 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	case ctx.GlobalBool(MainnetFlag.Name):
 		genesis = core.DefaultGenesisBlock()
 	case ctx.GlobalBool(RopstenFlag.Name):
-		genesis = core.DefaultRopstenGenesisBlock()
+		genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		genesis = core.DefaultRinkebyGenesisBlock()
 	case ctx.GlobalBool(GoerliFlag.Name):

@@ -286,7 +286,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType&& tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 	if !tx.Protected() {
@@ -304,7 +304,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType&& tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
 	R, S, V = decodeSignature(sig)
@@ -350,7 +350,7 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType&& tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 	v, r, s := tx.RawSignatureValues()

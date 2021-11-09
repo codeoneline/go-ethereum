@@ -282,7 +282,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(), msg.Value()) {
 		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 	}
-
+	// Check clauses 4-5, subtract intrinsic gas if everything is correct
+	gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, homestead, istanbul)
+	if err != nil {
+		return nil, err
+	}
 	// wanchain priv tx
 	var stampTotalGas uint64
 	if types.IsPrivacyTransaction(st.msg.TxType()) {
@@ -302,18 +306,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if err := st.gp.SubGas(totalUseableGas); err != nil {
 			return nil,  err
 		}
-	} else {
-		// Check clauses 4-5, subtract intrinsic gas if everything is correct
-		gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, homestead, istanbul)
-		if err != nil {
-			return nil, err
-		}
-		if st.gas < gas {
-			return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, gas)
-		}
-		st.gas -= gas
 	}
 
+
+	if st.gas < gas {
+		return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, gas)
+	}
+	st.gas -= gas
 
 	// Set up the initial access list.
 	if rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber); rules.IsBerlin {
@@ -333,7 +332,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	var requiredGas uint64
 	var usedGas uint64
-	if types.IsNormalTransaction(st.msg.TxType())  {
+	if types.IsNormalTransaction(st.msg.TxType()) || types.IsPosTransaction(st.msg.TxType()) {
 		requiredGas = st.gasUsed()
 		st.refundGas()
 		usedGas = st.gasUsed()
@@ -353,6 +352,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ReturnData: ret,
 	}, nil
 }
+
+
 
 func (st *StateTransition) refundGas() {
 	// Apply refund counter, capped to half of the used gas.

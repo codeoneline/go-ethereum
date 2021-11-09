@@ -1887,7 +1887,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		// Validate the state using the default validator
 		substart = time.Now()
 		if err := bc.validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
-			bc.reportBlock(block, receipts, err)
+			//bc.reportBlock(block, receipts, err)  // TODO MMMMMMMM why??
 			atomic.StoreUint32(&followupInterrupt, 1)
 			return it.index, err
 		}

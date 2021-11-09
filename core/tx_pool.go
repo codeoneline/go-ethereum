@@ -526,7 +526,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Accept only legacy transactions until EIP-2718/2930 activates.
 	if !pool.eip2718 && tx.Type() != types.LegacyTxType &&
-		tx.Type() != types.WanLegacyTxType && tx.Type() != types.WanPrivTxType && tx.Type() != types.WanPosTxType {
+		tx.Type() != types.WanLegacyTxType && tx.Type() != types.WanTestnetTxType  && tx.Type() != types.WanPrivTxType && tx.Type() != types.WanPosTxType {
 		return ErrTxTypeNotSupported
 	}
 	// Reject transactions over defined size to prevent DOS attacks
@@ -1245,6 +1245,17 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 		}
 		log.Trace("Removed unpayable queued transactions", "count", len(drops))
 		queuedNofundsMeter.Mark(int64(len(drops)))
+
+		// MMMMMMMMMMMMMMMMMM why delete them????
+		//
+		//// Remove all invalid privacy transactions
+		//invalidPrivacy := list.InvalidPrivacyTx(pool.currentState, pool.signer, pool.currentMaxGas)
+		//for _, tx := range invalidPrivacy {
+		//	hash := tx.Hash()
+		//	log.Info("Removed invalid privacy transaction", "hash", hash)
+		//	pool.all.Remove(hash)
+		//}
+
 
 		// Gather all executable transactions and promote them
 		readies := list.Ready(pool.pendingNonces.get(addr))

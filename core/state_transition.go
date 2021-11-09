@@ -68,6 +68,8 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+	TxType() uint64
+
 	AccessList() types.AccessList
 }
 
@@ -107,6 +109,35 @@ func (result *ExecutionResult) Revert() []byte {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+//func IntrinsicGas(data []byte, to *common.Address, homestead bool) *big.Int {
+//func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool) (uint64, error) {
+//	contractCreation := isContractCreation
+//
+//	igas := new(big.Int)
+//	if contractCreation  {
+//		igas.SetUint64(params.TxGasContractCreation)
+//	} else {
+//		igas.SetUint64(params.TxGas)
+//	}
+//	if len(data) > 0 {
+//		var nz int64
+//		for _, byt := range data {
+//			if byt != 0 {
+//				nz++
+//			}
+//		}
+//		m := big.NewInt(nz)
+//		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
+//		igas.Add(igas, m)
+//		m.SetInt64(int64(len(data)) - nz)
+//		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
+//		igas.Add(igas, m)
+//	}
+//
+//
+//	return igas.Uint64(), nil
+//}
+
 func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
@@ -234,8 +265,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// 6. caller has enough balance to cover asset transfer for **topmost** call
 
 	// Check clauses 1-3, buy gas if everything is correct
-	if err := st.preCheck(); err != nil {
-		return nil, err
+	if !types.IsPrivacyTransaction(st.msg.TxType()) {
+		if err := st.preCheck(); err != nil {
+			return nil, err
+		}
 	}
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
@@ -243,20 +276,44 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	istanbul := st.evm.ChainConfig().IsIstanbul(st.evm.Context.BlockNumber)
 	contractCreation := msg.To() == nil
 
-	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, homestead, istanbul)
-	if err != nil {
-		return nil, err
-	}
-	if st.gas < gas {
-		return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, gas)
-	}
-	st.gas -= gas
+
 
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(), msg.Value()) {
 		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 	}
+
+	// wanchain priv tx
+	var stampTotalGas uint64
+	if types.IsPrivacyTransaction(st.msg.TxType()) {
+		pureCallData, totalUseableGas, evmUseableGas, err := PreProcessPrivacyTx(st.evm.StateDB,
+			sender.Address().Bytes(),
+			st.data, st.gasPrice, st.value)
+		if err != nil {
+			return nil,  err
+		}
+
+		stampTotalGas = totalUseableGas
+		st.gas = evmUseableGas
+		st.initialGas = evmUseableGas
+		st.data = pureCallData[:]
+		//log.Trace("pre process privacy tx", "stampTotalGas", stampTotalGas, "evmUseableGas", evmUseableGas)
+		//sub gas from total gas of curent block,prevent gas is overhead gaslimit
+		if err := st.gp.SubGas(totalUseableGas); err != nil {
+			return nil,  err
+		}
+	} else {
+		// Check clauses 4-5, subtract intrinsic gas if everything is correct
+		gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, homestead, istanbul)
+		if err != nil {
+			return nil, err
+		}
+		if st.gas < gas {
+			return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, gas)
+		}
+		st.gas -= gas
+	}
+
 
 	// Set up the initial access list.
 	if rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber); rules.IsBerlin {
@@ -273,11 +330,25 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
-	st.refundGas()
-	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+
+	var requiredGas uint64
+	var usedGas uint64
+	if types.IsNormalTransaction(st.msg.TxType())  {
+		requiredGas = st.gasUsed()
+		st.refundGas()
+		usedGas = st.gasUsed()
+		//log.Trace("calc used gas, normal tx", "required gas", requiredGas, "used gas", usedGas)
+	} else if types.IsPrivacyTransaction(st.msg.TxType()) {
+		requiredGas = stampTotalGas
+		usedGas = requiredGas
+		//log.Trace("calc used gas, pos tx", "required gas", requiredGas, "used gas", usedGas)
+	}
+
+
+	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice))
 
 	return &ExecutionResult{
-		UsedGas:    st.gasUsed(),
+		UsedGas:    usedGas, //st.gasUsed(),
 		Err:        vmerr,
 		ReturnData: ret,
 	}, nil

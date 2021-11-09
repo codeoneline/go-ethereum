@@ -534,6 +534,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		to:         tx.To(),
 		amount:     tx.Value(),
 		data:       tx.Data(),
+		txType:     uint64(tx.Type()),
 		accessList: tx.AccessList(),
 		checkNonce: true,
 	}

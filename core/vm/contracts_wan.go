@@ -16,7 +16,6 @@
 
 package vm
 
-
 import (
 	"bytes"
 	"crypto/ecdsa"
@@ -25,17 +24,16 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 )
-
 
 var (
 	coinSCDefinition = `
@@ -72,7 +70,6 @@ var (
 	StampValueSet   = make(map[string]string, 5)
 	WanCoinValueSet = make(map[string]string, 10)
 
-
 	// errNotOnCurve is returned if a point being unmarshalled as a bn256 elliptic
 	// curve point is not on the curve.
 	errNotOnCurve = errors.New("point not on elliptic curve")
@@ -83,8 +80,6 @@ var (
 
 	// invalid ring signed info
 	ErrInvalidRingSigned = errors.New("invalid ring signed info")
-
-
 )
 
 const (
@@ -198,7 +193,7 @@ type PrecompiledContractWan interface {
 	ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error
 }
 
-func IsWanchainPrecompiled(addr common.Address, contract *Contract, evm *EVM) (PrecompiledContractWan, bool) {
+func IsWanchainPrecompiled(addr common.Address, contract *Contract, evm *EVM) (PrecompiledContract, bool) {
 	if bytes.Equal(addr.Bytes(), wanCoinPrecompileAddr.Bytes()) || bytes.Equal(addr.Bytes(), wanStampPrecompileAddr.Bytes()) {
 		switch addr {
 		case wanCoinPrecompileAddr:
@@ -229,10 +224,9 @@ func (evm *EVM) precompileWan(addr common.Address, contract *Contract, env *EVM)
 	return p, ok
 }
 
-
-type wanchainStampSC struct{
+type wanchainStampSC struct {
 	contract *Contract
-	evm *EVM
+	evm      *EVM
 }
 
 func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
@@ -240,7 +234,11 @@ func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
 	return params.SstoreSetGas * 2
 }
 
-func (c *wanchainStampSC) Run(in []byte) ([]byte, error) {
+func (c *wanchainStampSC) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	return c._Run(input)
+}
+
+func (c *wanchainStampSC) _Run(in []byte) ([]byte, error) {
 	if len(in) < 4 {
 		return nil, errParameters
 	}
@@ -342,7 +340,7 @@ func (c *wanchainStampSC) buyStamp(in []byte, contract *Contract, evm *EVM) ([]b
 
 type wanCoinSC struct {
 	contract *Contract
-	evm *EVM
+	evm      *EVM
 }
 
 func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
@@ -383,7 +381,7 @@ func (c *wanCoinSC) RequiredGas(input []byte) uint64 {
 
 }
 
-func (c *wanCoinSC) Run(in []byte) ([]byte, error) {  //, contract *Contract, evm *EVM
+func (c *wanCoinSC) _Run(in []byte) ([]byte, error) { //, contract *Contract, evm *EVM
 	if len(in) < 4 {
 		return nil, errParameters
 	}
@@ -398,6 +396,15 @@ func (c *wanCoinSC) Run(in []byte) ([]byte, error) {  //, contract *Contract, ev
 	}
 
 	return nil, errMethodId
+}
+
+func (c *wanCoinSC) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	// add by Jacob begin
+	c.contract = contract
+	c.evm = evm
+	// add by Jacob end
+
+	return c._Run(input)
 }
 
 func (c *wanCoinSC) ValidTx(stateDB StateDB, signer types.Signer, tx *types.Transaction) error {

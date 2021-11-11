@@ -16,8 +16,22 @@
 
 package abi
 
-// add by jacob
-// Unpack input in v according to the abi specification
-func (abi ABI) UnpackInput(v interface{}, name string, output []byte) (err error) {
-	return abi.UnpackIntoInterfaceWan(v, name, output)
+import (
+	"fmt"
+	"strings"
+)
+
+// Sig returns the methods string signature according to the ABI spec.
+//
+// Example
+//
+//     function foo(uint32 a, int b)    =    "foo(uint32,int256)"
+//
+// Please note that "int" is substitute for its canonical representation "int256"
+func (method Method) SigWan() string {
+	types := make([]string, len(method.Inputs))
+	for i, input := range method.Inputs {
+		types[i] = input.Type.String()
+	}
+	return fmt.Sprintf("%v(%v)", method.Name, strings.Join(types, ","))
 }

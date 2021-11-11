@@ -18,7 +18,6 @@ package core
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -89,7 +88,10 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 		return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), usedGas)
 	}
 	// Validate the received block's bloom with the one derived from the generated receipts.
+
 	// For valid blocks this should always validate to true.
+	//todo need delete below
+	//log.Info("===================", "receipts", fmt.Sprintf("%#v", *(receipts[0])))
 	rbloom := types.CreateBloom(receipts)
 	if rbloom != header.Bloom {
 		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)

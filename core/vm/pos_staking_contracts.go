@@ -1394,7 +1394,7 @@ func (p *PosStaking) stakeInLog(contract *Contract, evm *EVM, info *StakerInfo) 
 		params[2] = common.BigToHash(new(big.Int).SetUint64(info.FeeRate))
 		params[3] = common.BigToHash(new(big.Int).SetUint64(info.LockEpochs))
 		params[4] = info.Address.Hash()
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeIn"].Sig))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeIn"].SigWan()))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event stakeIn(address indexed sender, address indexed posAddress, uint indexed v, uint feeRate, uint lockEpoch);
@@ -1419,7 +1419,7 @@ func (p *PosStaking) stakeAppendLog(contract *Contract, evm *EVM, validator comm
 		params[1] = common.BigToHash(contract.Value())
 		params[2] = validator.Hash()
 
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeAppend"].Sig))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeAppend"].SigWan()))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event stakeAppend(address indexed sender, address indexed posAddress, uint indexed v);
@@ -1441,7 +1441,7 @@ func (p *PosStaking) stakeUpdateLog(contract *Contract, evm *EVM, info *StakerIn
 		params[1] = common.BigToHash(new(big.Int).SetUint64(info.NextLockEpochs))
 		params[2] = info.Address.Hash()
 
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdate"].Sig))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["stakeUpdate"].SigWan()))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event stakeUpdate(address indexed sender, address indexed posAddress, uint indexed lockEpoch);
@@ -1463,7 +1463,7 @@ func (p *PosStaking) delegateInLog(contract *Contract, evm *EVM, validator commo
 		params[1] = common.BigToHash(contract.Value())
 		params[2] = validator.Hash()
 
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateIn"].Sig))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateIn"].SigWan()))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event delegateIn(address indexed sender, address indexed posAddress, uint indexed v);
@@ -1485,7 +1485,7 @@ func (p *PosStaking) delegateOutLog(contract *Contract, evm *EVM, validator comm
 		params[0] = common.BytesToHash(contract.Caller().Bytes())
 		params[1] = validator.Hash()
 
-		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].Sig))
+		sig := crypto.Keccak256([]byte(cscAbi.Methods["delegateOut"].SigWan()))
 		return precompiledScAddLog(contract.Address(), evm, common.BytesToHash(sig), params, nil)
 	} else {
 		// event delegateOut(address indexed sender, address indexed posAddress);

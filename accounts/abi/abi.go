@@ -108,8 +108,6 @@ func (abi ABI) Unpack(name string, data []byte) ([]interface{}, error) {
 	return args.Unpack(data)
 }
 
-
-
 // UnpackIntoInterface unpacks the output in v according to the abi specification.
 // It performs an additional copy. Please only use, if you want to unpack into a
 // structure that does not strictly conform to the abi structure (e.g. has additional arguments)
@@ -117,6 +115,25 @@ func (abi ABI) UnpackIntoInterface(v interface{}, name string, data []byte) erro
 	args, err := abi.getArguments(name, data)
 	if err != nil {
 		return err
+	}
+	unpacked, err := args.Unpack(data)
+	if err != nil {
+		return err
+	}
+	return args.Copy(v, unpacked)
+}
+
+// add by jacob
+func (abi ABI) UnpackIntoInterfaceWan(v interface{}, name string, data []byte) error {
+
+	var args Arguments
+	if method, ok := abi.Methods[name]; ok {
+		if len(data)%32 != 0 {
+			return fmt.Errorf("abi: improperly formatted output")
+		}
+		args = method.Inputs
+	} else if event, ok := abi.Events[name]; ok {
+		args = event.Inputs
 	}
 	unpacked, err := args.Unpack(data)
 	if err != nil {

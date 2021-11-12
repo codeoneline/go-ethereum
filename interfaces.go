@@ -119,6 +119,7 @@ type CallMsg struct {
 	GasPrice *big.Int        // wei <-> gas exchange ratio
 	Value    *big.Int        // amount of wei sent along with the call
 	Data     []byte          // input data, usually an ABI-encoded contract method invocation
+	TxType   uint64
 
 	AccessList types.AccessList // EIP-2930 access list.
 }

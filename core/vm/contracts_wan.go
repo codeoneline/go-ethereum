@@ -235,6 +235,8 @@ func (c *wanchainStampSC) RequiredGas(input []byte) uint64 {
 }
 
 func (c *wanchainStampSC) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	c.contract = contract
+	c.evm = evm
 	return c._Run(input)
 }
 

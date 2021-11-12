@@ -22,6 +22,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -114,6 +116,11 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 // ceil if the blocks are full. If the ceil is exceeded, it will always decrease
 // the gas allowance.
 func CalcGasLimit(parent *types.Block, gasFloor, gasCeil uint64) uint64 {
+	epId, _ := util.CalEpochSlotID(parent.Header().Time)
+	if epId >= posconfig.ApolloEpochID {
+		params.GasLimitBoundDivisor = params.GasLimitBoundDivisorNew
+	}
+
 	// contrib = (parentGasUsed * 3 / 2) / 1024
 	contrib := (parent.GasUsed() + parent.GasUsed()/2) / params.GasLimitBoundDivisor
 
@@ -137,11 +144,14 @@ func CalcGasLimit(parent *types.Block, gasFloor, gasCeil uint64) uint64 {
 		if limit > gasFloor {
 			limit = gasFloor
 		}
-	} else if limit > gasCeil {
-		limit = parent.GasLimit() - decay
-		if limit < gasCeil {
-			limit = gasCeil
-		}
+	}
+
+	if limit > gasCeil {
+		//limit = parent.GasLimit() - decay
+		//if limit < gasCeil {
+		//	limit = gasCeil
+		//}
+		limit = gasCeil
 	}
 	return limit
 }

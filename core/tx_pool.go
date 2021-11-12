@@ -526,7 +526,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Accept only legacy transactions until EIP-2718/2930 activates.
 	if !pool.eip2718 && tx.Type() != types.LegacyTxType &&
-		tx.Type() != types.WanLegacyTxType && tx.Type() != types.WanPrivTxType && tx.Type() != types.WanPosTxType {
+		tx.Type() != types.WanLegacyTxType && tx.Type() != types.WanTestnetTxType  && tx.Type() != types.WanPrivTxType && tx.Type() != types.WanPosTxType {
 		return ErrTxTypeNotSupported
 	}
 	// Reject transactions over defined size to prevent DOS attacks

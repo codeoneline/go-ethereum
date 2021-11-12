@@ -20,6 +20,8 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/posdb"
 	"math/big"
 	"os"
 	"reflect"
@@ -134,6 +136,10 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	}
 	applyMetricConfig(ctx, &cfg)
+
+	//Init wanpos private db
+	posdb.DbInitAll(cfg.Node.DataDir)
+	posconfig.Init(&cfg.Node, cfg.Eth.NetworkId)
 
 	return stack, cfg
 }

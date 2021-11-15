@@ -77,6 +77,24 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		}
 		return consensus.ErrPrunedAncestor
 	}
+
+	// add by Jacob begin
+	//Verify only allow one block in a slot
+	if block.NumberU64() > v.bc.chainConfig.PosFirstBlock.Uint64() {
+		//parentBlock := v.bc.GetBlockByHash(block.ParentHash())
+		parentBlockHeader := v.bc.GetHeaderByHash(block.ParentHash())
+		epIDNew, slotIDNew := util.CalEpochSlotID(header.Time)
+		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlockHeader.Time)
+		flatSlotIdNew := epIDNew*posconfig.SlotCount + slotIDNew
+		flatSlotIdOld := epIDOld*posconfig.SlotCount + slotIDOld
+		if epIDNew > posconfig.ApolloEpochID {
+			if flatSlotIdNew <= flatSlotIdOld {
+				return fmt.Errorf("Invalid slot in chain.")
+			}
+		}
+	}
+	// add by Jacob end
+
 	return nil
 }
 
@@ -105,9 +123,19 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
-	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
+
+	// cancel by Jacob begin
+	//if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
+	//	return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
+	//}
+	// cancel by Jacob end
+
+	// Add by Jacob begin
+	if root := statedb.IntermediateRoot(true /*v.config.IsEIP158(header.Number)*/); header.Root != root {
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
 	}
+	// Add by jacob end
+
 	return nil
 }
 

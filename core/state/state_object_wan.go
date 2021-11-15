@@ -21,9 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-
 type StorageByteArray map[common.Hash][]byte
-
 
 // stateObject represents an Ethereum account which is being modified.
 //
@@ -61,16 +59,16 @@ type stateObject struct {
 	deleted   bool
 
 	// new
-	dirtyStorageByteArray  StorageByteArray
-	pendingStorageByteArray  StorageByteArray
+	dirtyStorageByteArray   StorageByteArray
+	pendingStorageByteArray StorageByteArray
 }
-
 
 func (self *stateObject) GetStateByteArray(db Database, key common.Hash) []byte {
 	value, exists := self.dirtyStorageByteArray[key]
 	if exists {
 		return value
 	}
+	//todo Jacob why need to get data from pendingXX?
 	value, exists = self.pendingStorageByteArray[key]
 	if exists {
 		return value
@@ -94,11 +92,9 @@ func (self *stateObject) SetStateByteArray(db Database, key common.Hash, value [
 
 }
 
-
 func (self *stateObject) setStateByteArray(key common.Hash, value []byte) {
 	self.dirtyStorageByteArray[key] = value
 }
-
 
 func (self StorageByteArray) Copy() StorageByteArray {
 	cpy := make(StorageByteArray)
@@ -127,6 +123,7 @@ func (s *stateObject) deepCopy(db *StateDB) *stateObject {
 
 	return stateObject
 }
+
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
 	emptyHash := common.Hash{}

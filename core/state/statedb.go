@@ -835,6 +835,11 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+
+	//todo add by Jacob for debug begin
+	log.Info("IntermediateRoot", "before IntermediateRoot hash", s.trie.Hash().Hex())
+	//todo add by Jacob for debug end
+
 	// Finalise all the dirty storage states and write them into the tries
 	s.Finalise(deleteEmptyObjects)
 
@@ -859,17 +864,21 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	// to pull useful data from disk.
 	for addr := range s.stateObjectsPending {
 		if obj := s.stateObjects[addr]; !obj.deleted {
+			// add by Jacob
 			obj.updateRoot(s.db)
+			log.Info("IntermediateRoot", "********** IntermediateRoot hash", s.trie.Hash().Hex(), "addr", addr.String())
 		}
 	}
 	// Now we're about to start to write changes to the trie. The trie is so far
 	// _untouched_. We can check with the prefetcher, if it can give us a trie
 	// which has the same root, but also has some content loaded into it.
+
 	if prefetcher != nil {
 		if trie := prefetcher.trie(s.originalRoot); trie != nil {
 			s.trie = trie
 		}
 	}
+
 	usedAddrs := make([][]byte, 0, len(s.stateObjectsPending))
 	for addr := range s.stateObjectsPending {
 		if obj := s.stateObjects[addr]; obj.deleted || obj.empty() { // TODO why? MERGE
@@ -879,6 +888,7 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 		}
 		usedAddrs = append(usedAddrs, common.CopyBytes(addr[:])) // Copy needed for closure
 	}
+
 	if prefetcher != nil {
 		prefetcher.used(s.originalRoot, usedAddrs)
 	}
@@ -889,6 +899,10 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	if metrics.EnabledExpensive {
 		defer func(start time.Time) { s.AccountHashes += time.Since(start) }(time.Now())
 	}
+
+	//todo add by Jacob for debug begin
+	log.Info("IntermediateRoot", "after IntermediateRoot hash", s.trie.Hash().Hex())
+	//todo add by Jacob for debug end
 	return s.trie.Hash()
 }
 

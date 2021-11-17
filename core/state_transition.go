@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/pos/incentive"
 	"math"
 	"math/big"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/util"
 )
 
 /*
@@ -109,7 +111,7 @@ func (result *ExecutionResult) Revert() []byte {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool) (uint64, error) {
+func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool, to *common.Address) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if isContractCreation && isHomestead {
@@ -146,6 +148,12 @@ func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation b
 		gas += uint64(len(accessList)) * params.TxAccessListAddressGas
 		gas += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 	}
+
+	// reduce gas used for pos tx
+	if vm.IsPosPrecompiledAddr(to) {
+		gas = gas / 10
+	}
+
 	return gas, nil
 }
 
@@ -247,14 +255,12 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	istanbul := st.evm.ChainConfig().IsIstanbul(st.evm.Context.BlockNumber)
 	contractCreation := msg.To() == nil
 
-
-
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(), msg.Value()) {
 		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 	}
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, homestead, istanbul)
+	gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, homestead, istanbul, msg.To())
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +271,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			sender.Address().Bytes(),
 			st.data, st.gasPrice, st.value)
 		if err != nil {
-			return nil,  err
+			return nil, err
 		}
 
 		stampTotalGas = totalUseableGas
@@ -275,10 +281,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		//log.Trace("pre process privacy tx", "stampTotalGas", stampTotalGas, "evmUseableGas", evmUseableGas)
 		//sub gas from total gas of curent block,prevent gas is overhead gaslimit
 		if err := st.gp.SubGas(totalUseableGas); err != nil {
-			return nil,  err
+			return nil, err
 		}
 	}
-
 
 	if st.gas < gas {
 		return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, gas)
@@ -314,8 +319,14 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		//log.Trace("calc used gas, pos tx", "required gas", requiredGas, "used gas", usedGas)
 	}
 
+	//st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice))
 
-	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice))
+	if !params.IsPosActive() {
+		st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice))
+	} else {
+		epochID, _ := util.GetEpochSlotIDFromDifficulty(st.evm.Context.Difficulty)
+		incentive.AddEpochGas(st.state, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice), epochID)
+	}
 
 	return &ExecutionResult{
 		UsedGas:    usedGas, //st.gasUsed(),
@@ -323,8 +334,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ReturnData: ret,
 	}, nil
 }
-
-
 
 func (st *StateTransition) refundGas() {
 	// Apply refund counter, capped to half of the used gas.

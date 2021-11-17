@@ -19,10 +19,10 @@ package state
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
 	"github.com/ethereum/go-ethereum/trie"
-
 )
-
 
 func (self *StateDB) GetStateByteArray(a common.Address, b common.Hash) []byte {
 	stateObject := self.getStateObject(a)
@@ -38,14 +38,13 @@ func (self *StateDB) SetStateByteArray(addr common.Address, key common.Hash, val
 	}
 }
 
-
 // cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key common.Hash, value []byte) bool) {
 
-	//epochid,_ := util.GetCurrentBlkEpochSlotID()
+	epochid, _ := util.GetCurrentBlkEpochSlotID()
 
-	if true { // TODO  posconfig.Cfg().MercuryEpochId
-		db.ForEachStorageByteArrayBeforeFork(addr,cb)
+	if epochid < posconfig.Cfg().MercuryEpochId {
+		db.ForEachStorageByteArrayBeforeFork(addr, cb)
 
 	} else {
 
@@ -73,7 +72,6 @@ func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key comm
 		}
 	}
 }
-
 
 // cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (db *StateDB) ForEachStorageByteArrayBeforeFork(addr common.Address, cb func(key common.Hash, value []byte) bool) {

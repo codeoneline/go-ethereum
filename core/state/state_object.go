@@ -55,6 +55,7 @@ func (s Storage) Copy() Storage {
 
 	return cpy
 }
+
 //
 //// stateObject represents an Ethereum account which is being modified.
 ////
@@ -118,15 +119,15 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 		data.Root = emptyRoot
 	}
 	return &stateObject{
-		db:             db,
-		address:        address,
-		addrHash:       crypto.Keccak256Hash(address[:]),
-		data:           data,
-		originStorage:  make(Storage),
-		pendingStorage: make(Storage),
-		dirtyStorage:   make(Storage),
-		dirtyStorageByteArray:  make(StorageByteArray),
-		pendingStorageByteArray:make(StorageByteArray),
+		db:                      db,
+		address:                 address,
+		addrHash:                crypto.Keccak256Hash(address[:]),
+		data:                    data,
+		originStorage:           make(Storage),
+		pendingStorage:          make(Storage),
+		dirtyStorage:            make(Storage),
+		dirtyStorageByteArray:   make(StorageByteArray),
+		pendingStorageByteArray: make(StorageByteArray),
 	}
 }
 
@@ -312,6 +313,9 @@ func (s *stateObject) setState(key, value common.Hash) {
 // finalise moves all dirty storage slots into the pending area to be hashed or
 // committed later. It is invoked at the end of every transaction.
 func (s *stateObject) finalise(prefetch bool) {
+
+	//todo Jacob why not add StorageByteArray to slotsToPrefetch??
+
 	slotsToPrefetch := make([][]byte, 0, len(s.dirtyStorage))
 	for key, value := range s.dirtyStorage {
 		s.pendingStorage[key] = value
@@ -325,7 +329,6 @@ func (s *stateObject) finalise(prefetch bool) {
 	if len(s.dirtyStorage) > 0 {
 		s.dirtyStorage = make(Storage)
 	}
-
 
 	for key, value := range s.dirtyStorageByteArray {
 		s.pendingStorageByteArray[key] = value
@@ -341,7 +344,7 @@ func (s *stateObject) finalise(prefetch bool) {
 func (s *stateObject) updateTrie(db Database) Trie {
 	// Make sure all dirty slots are finalized into the pending storage area
 	s.finalise(false) // Don't prefetch any more, pull directly if need be
-	if len(s.pendingStorage) == 0  && len(s.pendingStorageByteArray) == 0 {
+	if len(s.pendingStorage) == 0 && len(s.pendingStorageByteArray) == 0 {
 		return s.trie
 	}
 	// Track the amount of time wasted on updating the storage trie
@@ -384,7 +387,6 @@ func (s *stateObject) updateTrie(db Database) Trie {
 		usedStorage = append(usedStorage, common.CopyBytes(key[:])) // Copy needed for closure
 	}
 
-
 	for key, value := range s.pendingStorageByteArray {
 		if len(value) == 0 {
 			s.setError(tr.TryDelete(key[:]))
@@ -396,7 +398,6 @@ func (s *stateObject) updateTrie(db Database) Trie {
 	if len(s.pendingStorageByteArray) > 0 {
 		s.pendingStorageByteArray = make(StorageByteArray)
 	}
-
 
 	if s.db.prefetcher != nil {
 		s.db.prefetcher.used(s.data.Root, usedStorage)

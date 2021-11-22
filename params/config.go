@@ -27,7 +27,7 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
+	//MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
 	RopstenGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d")
 	RinkebyGenesisHash = common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
 	GoerliGenesisHash  = common.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
@@ -53,24 +53,23 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1),
-		HomesteadBlock:      big.NewInt(1_150_000),
-		DAOForkBlock:        big.NewInt(1_920_000),
-		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(2_463_000),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(2_675_000),
-		EIP158Block:         big.NewInt(2_675_000),
-		ByzantiumBlock:      big.NewInt(4_370_000),
-		ConstantinopleBlock: big.NewInt(7_280_000),
-		PetersburgBlock:     big.NewInt(7_280_000),
-		IstanbulBlock:       big.NewInt(9_069_000),
-		MuirGlacierBlock:    big.NewInt(9_200_000),
-		BerlinBlock:         big.NewInt(12_244_000),
-		LondonBlock:         big.NewInt(12_965_000),
-		Ethash:              new(EthashConfig),
-	}
+	//MainnetChainConfig = &ChainConfig{
+	//	ChainID:             big.NewInt(1),
+	//	HomesteadBlock:      big.NewInt(1_150_000),
+	//	DAOForkBlock:        big.NewInt(1_920_000),
+	//	DAOForkSupport:      true,
+	//	EIP150Block:         big.NewInt(2_463_000),
+	//	EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+	//	EIP155Block:         big.NewInt(2_675_000),
+	//	EIP158Block:         big.NewInt(2_675_000),
+	//	ByzantiumBlock:      big.NewInt(4_370_000),
+	//	ConstantinopleBlock: big.NewInt(7_280_000),
+	//	PetersburgBlock:     big.NewInt(7_280_000),
+	//	IstanbulBlock:       big.NewInt(9_069_000),
+	//	MuirGlacierBlock:    big.NewInt(9_200_000),
+	//	BerlinBlock:         big.NewInt(12_244_000),
+	//	Ethash:              new(EthashConfig),
+	//}
 
 	// MainnetTrustedCheckpoint contains the light client trusted checkpoint for the main network.
 	MainnetTrustedCheckpoint = &TrustedCheckpoint{
@@ -225,16 +224,16 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil,nil,false,nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, nil,false,nil}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig),nil,nil,false,nil}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -321,6 +320,11 @@ type ChainConfig struct {
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
+
+	// add by jacob
+	PosFirstBlock *big.Int     `json:"posFirstBlock,omitempty"`
+	IsPosActive   bool         `json:"isPosActive,omitempty"`
+	Pluto         *PlutoConfig `json:"pluto,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -340,6 +344,17 @@ type CliqueConfig struct {
 // String implements the stringer interface, returning the consensus engine details.
 func (c *CliqueConfig) String() string {
 	return "clique"
+}
+
+// PlutoConfig is the consensus engine configs for proof-of-authority based sealing.
+type PlutoConfig struct {
+	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
+	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (c *PlutoConfig) String() string {
+	return "pluto"
 }
 
 // String implements the fmt.Stringer interface.

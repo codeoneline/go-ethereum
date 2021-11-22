@@ -17,11 +17,21 @@
 package vm
 
 import (
+	"errors"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 	"golang.org/x/crypto/sha3"
+	"math/big"
+)
+
+var (
+	bigZero                  = new(big.Int)
+	errWriteProtection       = errors.New("evm: write protection")
+	errReturnDataOutOfBounds = errors.New("evm: return data out of bounds")
+	errExecutionReverted     = errors.New("evm: execution reverted")
+	errMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {

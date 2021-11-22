@@ -57,46 +57,48 @@ func (s Storage) Copy() Storage {
 	return cpy
 }
 
-// stateObject represents an Ethereum account which is being modified.
 //
-// The usage pattern is as follows:
-// First you need to obtain a state object.
-// Account values can be accessed and modified through the object.
-// Finally, call CommitTrie to write the modified storage trie into a database.
-type stateObject struct {
-	address  common.Address
-	addrHash common.Hash // hash of ethereum address of the account
-	data     types.StateAccount
-	db       *StateDB
-
-	// DB error.
-	// State objects are used by the consensus core and VM which are
-	// unable to deal with database-level errors. Any error that occurs
-	// during a database read is memoized here and will eventually be returned
-	// by StateDB.Commit.
-	dbErr error
-
-	// Write caches.
-	trie Trie // storage trie, which becomes non-nil on first access
-	code Code // contract bytecode, which gets set when code is loaded
-
-	originStorage  Storage // Storage cache of original entries to dedup rewrites, reset for every transaction
-	pendingStorage Storage // Storage entries that need to be flushed to disk, at the end of an entire block
-	dirtyStorage   Storage // Storage entries that have been modified in the current transaction execution
-	fakeStorage    Storage // Fake storage which constructed by caller for debugging purpose.
-
-	// Cache flags.
-	// When an object is marked suicided it will be delete from the trie
-	// during the "update" phase of the state transition.
-	dirtyCode bool // true if the code was updated
-	suicided  bool
-	deleted   bool
-}
+//// stateObject represents an Ethereum account which is being modified.
+////
+//// The usage pattern is as follows:
+//// First you need to obtain a state object.
+//// Account values can be accessed and modified through the object.
+//// Finally, call CommitTrie to write the modified storage trie into a database.
+//type stateObject struct {
+//	address  common.Address
+//	addrHash common.Hash // hash of ethereum address of the account
+//	data     Account
+//	db       *StateDB
+//
+//	// DB error.
+//	// State objects are used by the consensus core and VM which are
+//	// unable to deal with database-level errors. Any error that occurs
+//	// during a database read is memoized here and will eventually be returned
+//	// by StateDB.Commit.
+//	dbErr error
+//
+//	// Write caches.
+//	trie Trie // storage trie, which becomes non-nil on first access
+//	code Code // contract bytecode, which gets set when code is loaded
+//
+//	originStorage  Storage // Storage cache of original entries to dedup rewrites, reset for every transaction
+//	pendingStorage Storage // Storage entries that need to be flushed to disk, at the end of an entire block
+//	dirtyStorage   Storage // Storage entries that have been modified in the current transaction execution
+//	fakeStorage    Storage // Fake storage which constructed by caller for debugging purpose.
+//
+//	// Cache flags.
+//	// When an object is marked suicided it will be delete from the trie
+//	// during the "update" phase of the state transition.
+//	dirtyCode bool // true if the code was updated
+//	suicided  bool
+//	deleted   bool
+//}
 
 // empty returns whether the account is considered empty.
-func (s *stateObject) empty() bool {
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
-}
+//func (s *stateObject) empty() bool {
+//	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+//}
+//}
 
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data types.StateAccount) *stateObject {
@@ -117,6 +119,8 @@ func newObject(db *StateDB, address common.Address, data types.StateAccount) *st
 		originStorage:  make(Storage),
 		pendingStorage: make(Storage),
 		dirtyStorage:   make(Storage),
+		dirtyStorageByteArray:   make(StorageByteArray),
+		pendingStorageByteArray: make(StorageByteArray),
 	}
 }
 
@@ -302,6 +306,9 @@ func (s *stateObject) setState(key, value common.Hash) {
 // finalise moves all dirty storage slots into the pending area to be hashed or
 // committed later. It is invoked at the end of every transaction.
 func (s *stateObject) finalise(prefetch bool) {
+
+	//todo Jacob why not add StorageByteArray to slotsToPrefetch??
+
 	slotsToPrefetch := make([][]byte, 0, len(s.dirtyStorage))
 	for key, value := range s.dirtyStorage {
 		s.pendingStorage[key] = value
@@ -315,14 +322,22 @@ func (s *stateObject) finalise(prefetch bool) {
 	if len(s.dirtyStorage) > 0 {
 		s.dirtyStorage = make(Storage)
 	}
+
+	for key, value := range s.dirtyStorageByteArray {
+		s.pendingStorageByteArray[key] = value
+	}
+	if len(s.dirtyStorageByteArray) > 0 {
+		s.dirtyStorageByteArray = make(StorageByteArray)
+	}
+
 }
 
 // updateTrie writes cached storage modifications into the object's storage trie.
 // It will return nil if the trie has not been loaded and no changes have been made
 func (s *stateObject) updateTrie(db Database) Trie {
 	// Make sure all dirty slots are finalized into the pending storage area
-	s.finalise(false) // Don't prefetch anymore, pull directly if need be
-	if len(s.pendingStorage) == 0 {
+	s.finalise(false) // Don't prefetch any more, pull directly if need be
+	if len(s.pendingStorage) == 0 && len(s.pendingStorageByteArray) == 0 {
 		return s.trie
 	}
 	// Track the amount of time wasted on updating the storage trie
@@ -366,6 +381,19 @@ func (s *stateObject) updateTrie(db Database) Trie {
 		}
 		usedStorage = append(usedStorage, common.CopyBytes(key[:])) // Copy needed for closure
 	}
+
+	for key, value := range s.pendingStorageByteArray {
+		if len(value) == 0 {
+			s.setError(tr.TryDelete(key[:]))
+		} else {
+			s.setError(tr.TryUpdate(key[:], value))
+
+		}
+	}
+	if len(s.pendingStorageByteArray) > 0 {
+		s.pendingStorageByteArray = make(StorageByteArray)
+	}
+
 	if s.db.prefetcher != nil {
 		s.db.prefetcher.used(s.data.Root, usedStorage)
 	}
@@ -444,20 +472,23 @@ func (s *stateObject) setBalance(amount *big.Int) {
 	s.data.Balance = amount
 }
 
-func (s *stateObject) deepCopy(db *StateDB) *stateObject {
-	stateObject := newObject(db, s.address, s.data)
-	if s.trie != nil {
-		stateObject.trie = db.db.CopyTrie(s.trie)
-	}
-	stateObject.code = s.code
-	stateObject.dirtyStorage = s.dirtyStorage.Copy()
-	stateObject.originStorage = s.originStorage.Copy()
-	stateObject.pendingStorage = s.pendingStorage.Copy()
-	stateObject.suicided = s.suicided
-	stateObject.dirtyCode = s.dirtyCode
-	stateObject.deleted = s.deleted
-	return stateObject
-}
+// Return the gas back to the origin. Used by the Virtual machine or Closures
+func (s *stateObject) ReturnGas(gas *big.Int) {}
+
+//func (s *stateObject) deepCopy(db *StateDB) *stateObject {
+//	stateObject := newObject(db, s.address, s.data)
+//	if s.trie != nil {
+//		stateObject.trie = db.db.CopyTrie(s.trie)
+//	}
+//	stateObject.code = s.code
+//	stateObject.dirtyStorage = s.dirtyStorage.Copy()
+//	stateObject.originStorage = s.originStorage.Copy()
+//	stateObject.pendingStorage = s.pendingStorage.Copy()
+//	stateObject.suicided = s.suicided
+//	stateObject.dirtyCode = s.dirtyCode
+//	stateObject.deleted = s.deleted
+//	return stateObject
+//}
 
 //
 // Attribute accessors

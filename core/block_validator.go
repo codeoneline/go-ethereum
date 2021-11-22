@@ -23,6 +23,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -43,7 +45,12 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 		engine: engine,
 		bc:     blockchain,
 	}
+	blockchain.RegisterSwitchEngine(validator)
 	return validator
+}
+
+func (v *BlockValidator) SwitchEngine(engine consensus.Engine) {
+	v.engine = engine
 }
 
 // ValidateBody validates the given block's uncles and verifies the block
@@ -71,6 +78,24 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		}
 		return consensus.ErrPrunedAncestor
 	}
+
+	// add by Jacob begin
+	//Verify only allow one block in a slot
+	if block.NumberU64() > v.bc.chainConfig.PosFirstBlock.Uint64() {
+		//parentBlock := v.bc.GetBlockByHash(block.ParentHash())
+		parentBlockHeader := v.bc.GetHeaderByHash(block.ParentHash())
+		epIDNew, slotIDNew := util.CalEpochSlotID(header.Time)
+		epIDOld, slotIDOld := util.CalEpochSlotID(parentBlockHeader.Time)
+		flatSlotIdNew := epIDNew*posconfig.SlotCount + slotIDNew
+		flatSlotIdOld := epIDOld*posconfig.SlotCount + slotIDOld
+		if epIDNew > posconfig.ApolloEpochID {
+			if flatSlotIdNew <= flatSlotIdOld {
+				return fmt.Errorf("Invalid slot in chain.")
+			}
+		}
+	}
+	// add by Jacob end
+
 	return nil
 }
 
@@ -85,6 +110,8 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	}
 	// Validate the received block's bloom with the one derived from the generated receipts.
 	// For valid blocks this should always validate to true.
+	//todo need delete below
+	//log.Info("===================", "receipts", fmt.Sprintf("%#v", *(receipts[0])))
 	rbloom := types.CreateBloom(receipts)
 	if rbloom != header.Bloom {
 		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
@@ -96,16 +123,30 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
-	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
+
+	// cancel by Jacob begin
+	//if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
+	//	return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
+	//}
+	// cancel by Jacob end
+
+	// Add by Jacob begin
+	if root := statedb.IntermediateRoot(true /*v.config.IsEIP158(header.Number)*/); header.Root != root {
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
 	}
+	// Add by jacob end
+
 	return nil
 }
 
 // CalcGasLimit computes the gas limit of the next block after parent. It aims
 // to keep the baseline gas close to the provided target, and increase it towards
 // the target if the baseline gas is lower.
-func CalcGasLimit(parentGasLimit, desiredLimit uint64) uint64 {
+func CalcGasLimit(parent *types.Block, parentGasLimit, desiredLimit uint64) uint64 {
+	epId, _ := util.CalEpochSlotID(parent.Header().Time)
+	if epId >= posconfig.ApolloEpochID {
+		params.GasLimitBoundDivisor = params.GasLimitBoundDivisorNew
+	}
 	delta := parentGasLimit/params.GasLimitBoundDivisor - 1
 	limit := parentGasLimit
 	if desiredLimit < params.MinGasLimit {
@@ -119,11 +160,13 @@ func CalcGasLimit(parentGasLimit, desiredLimit uint64) uint64 {
 		}
 		return limit
 	}
-	if limit > desiredLimit {
-		limit = parentGasLimit - delta
-		if limit < desiredLimit {
-			limit = desiredLimit
-		}
-	}
+
+	//if limit > gasCeil { // TODO MERGE why???
+	//	//limit = parent.GasLimit() - decay
+	//	//if limit < gasCeil {
+	//	//	limit = gasCeil
+	//	//}
+	//	limit = gasCeil
+	//}
 	return limit
 }

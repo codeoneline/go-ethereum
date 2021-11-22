@@ -19,8 +19,8 @@ package node
 import (
 	"os"
 	"os/user"
-	"path/filepath"
-	"runtime"
+	//"path/filepath"
+	//"runtime"
 
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/nat"
@@ -47,38 +47,39 @@ var DefaultConfig = Config{
 	WSModules:           []string{"net", "web3"},
 	GraphQLVirtualHosts: []string{"localhost"},
 	P2P: p2p.Config{
-		ListenAddr: ":30303",
+		ListenAddr: ":17717",
 		MaxPeers:   50,
 		NAT:        nat.Any(),
 	},
 }
 
-// DefaultDataDir is the default data directory to use for the databases and other
-// persistence requirements.
-func DefaultDataDir() string {
-	// Try to place the data folder in the user's home dir
-	home := homeDir()
-	if home != "" {
-		switch runtime.GOOS {
-		case "darwin":
-			return filepath.Join(home, "Library", "Ethereum")
-		case "windows":
-			// We used to put everything in %HOME%\AppData\Roaming, but this caused
-			// problems with non-typical setups. If this fallback location exists and
-			// is non-empty, use it, otherwise DTRT and check %LOCALAPPDATA%.
-			fallback := filepath.Join(home, "AppData", "Roaming", "Ethereum")
-			appdata := windowsAppData()
-			if appdata == "" || isNonEmptyDir(fallback) {
-				return fallback
-			}
-			return filepath.Join(appdata, "Ethereum")
-		default:
-			return filepath.Join(home, ".ethereum")
-		}
-	}
-	// As we cannot guess a stable location, return empty and handle later
-	return ""
-}
+//
+//// DefaultDataDir is the default data directory to use for the databases and other
+//// persistence requirements.
+//func DefaultDataDir() string {
+//	// Try to place the data folder in the user's home dir
+//	home := homeDir()
+//	if home != "" {
+//		switch runtime.GOOS {
+//		case "darwin":
+//			return filepath.Join(home, "Library", "Ethereum")
+//		case "windows":
+//			// We used to put everything in %HOME%\AppData\Roaming, but this caused
+//			// problems with non-typical setups. If this fallback location exists and
+//			// is non-empty, use it, otherwise DTRT and check %LOCALAPPDATA%.
+//			fallback := filepath.Join(home, "AppData", "Roaming", "Ethereum")
+//			appdata := windowsAppData()
+//			if appdata == "" || isNonEmptyDir(fallback) {
+//				return fallback
+//			}
+//			return filepath.Join(appdata, "Ethereum")
+//		default:
+//			return filepath.Join(home, ".ethereum")
+//		}
+//	}
+//	// As we cannot guess a stable location, return empty and handle later
+//	return ""
+//}
 
 func windowsAppData() string {
 	v := os.Getenv("LOCALAPPDATA")

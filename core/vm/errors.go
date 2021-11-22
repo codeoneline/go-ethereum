@@ -35,6 +35,8 @@ var (
 	ErrReturnDataOutOfBounds    = errors.New("return data out of bounds")
 	ErrGasUintOverflow          = errors.New("gas uint64 overflow")
 	ErrInvalidCode              = errors.New("invalid code: must not begin with 0xef")
+	ErrInvalidPrivacyValue      = errors.New("invalid privacy transaction value")
+	ErrInvalidGasPrice          = errors.New("invalid gas price")
 )
 
 // ErrStackUnderflow wraps an evm error when the items on the stack less

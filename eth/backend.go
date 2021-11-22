@@ -20,6 +20,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/pluto"
 	"math/big"
 	"runtime"
 	"sync"
@@ -155,6 +156,16 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		p2pServer:         stack.Server(),
 	}
 
+	log.Info("Initialised chain configuration", "config", chainConfig)
+	posEngine := pluto.New(chainConfig.Pluto, chainDb)
+
+	inPosStage := false
+	if chainConfig.IsPosActive ||
+		(core.PeekChainHeight(chainDb)+1) >= chainConfig.PosFirstBlock.Uint64() {
+		eth.engine = posEngine
+		inPosStage = true
+	}
+
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
 	var dbVer = "<nil>"
 	if bcVersion != nil {
@@ -192,6 +203,10 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	//eth.blockchain.RegisterSwitchEngine(eth)
+	eth.blockchain.PrependRegisterSwitchEngine(eth)
+
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -269,6 +284,14 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				"age", common.PrettyAge(t))
 		}
 	}
+
+	// jacob pos start
+	if inPosStage {
+		miner.PosInit(eth)
+		chainConfig.SetPosActive()
+	}
+	return eth, nil
+
 	return eth, nil
 }
 
@@ -562,4 +585,10 @@ func (s *Ethereum) Stop() error {
 	s.eventMux.Stop()
 
 	return nil
+}
+
+func (s *Ethereum) SwitchEngine(engine consensus.Engine) {
+	s.engine = engine
+
+	miner.PosInit(s)
 }

@@ -18,6 +18,7 @@ package core
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"math"
 	"math/big"
 	"sort"
@@ -585,7 +586,9 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Accept only legacy transactions until EIP-2718/2930 activates.
-	if !pool.eip2718 && tx.Type() != types.LegacyTxType {
+	if !pool.eip2718 && tx.Type() != types.LegacyTxType &&
+		tx.Type() != types.WanLegacyTxType && tx.Type() != types.WanTestnetTxType && tx.Type() != types.WanPrivTxType && tx.Type() != types.WanPosTxType {
+
 		return ErrTxTypeNotSupported
 	}
 	// Reject dynamic fee transactions until EIP-1559 activates.
@@ -641,6 +644,20 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
+	}
+	// Check precompile contracts transactions validation
+	if tx.To() != nil {
+		if p, isWanPrecompile := vm.IsWanchainPrecompiled(*tx.To(), nil, nil); isWanPrecompile {
+			//if err = p.ValidTx(pool.currentState, pool.signer, tx); err != nil {
+			//	return  err
+			//}
+			v, ok := p.(vm.IValidTX)
+			if ok {
+				if err = v.ValidTx(pool.currentState, pool.signer, tx); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"container/heap"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"sync/atomic"
@@ -42,9 +43,13 @@ var (
 
 // Transaction types.
 const (
-	LegacyTxType = iota
-	AccessListTxType
-	DynamicFeeTxType
+	LegacyTxType     = iota
+	WanLegacyTxType  = 1
+	WanTestnetTxType = 2
+	WanPrivTxType    = 6
+	WanPosTxType     = 7
+	AccessListTxType = 9
+	DynamicFeeTxType = 10
 )
 
 // Transaction is an Ethereum transaction.
@@ -89,7 +94,7 @@ type TxData interface {
 
 // EncodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
-	if tx.Type() == LegacyTxType {
+	if tx.Type() == LegacyTxType || tx.Type() == WanLegacyTxType || tx.Type() == WanTestnetTxType || tx.Type() == WanPosTxType || tx.Type() == WanPrivTxType {
 		return rlp.Encode(w, tx.inner)
 	}
 	// It's an EIP-2718 typed TX envelope.
@@ -112,7 +117,7 @@ func (tx *Transaction) encodeTyped(w *bytes.Buffer) error {
 // For legacy transactions, it returns the RLP encoding. For EIP-2718 typed
 // transactions, it returns the type and payload.
 func (tx *Transaction) MarshalBinary() ([]byte, error) {
-	if tx.Type() == LegacyTxType {
+	if tx.Type() == LegacyTxType || tx.Type() == WanLegacyTxType || tx.Type() == WanTestnetTxType || tx.Type() == WanTestnetTxType || tx.Type() == WanPosTxType || tx.Type() == WanPrivTxType {
 		return rlp.EncodeToBytes(tx.inner)
 	}
 	var buf bytes.Buffer
@@ -128,7 +133,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return err
 	case kind == rlp.List:
 		// It's a legacy transaction.
-		var inner LegacyTx
+		var inner WanLegacyTx
 		err := s.Decode(&inner)
 		if err == nil {
 			tx.setDecoded(&inner, int(rlp.ListSize(size)))
@@ -181,6 +186,13 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 	case AccessListTxType:
 		var inner AccessListTx
 		err := rlp.DecodeBytes(b[1:], &inner)
+		return &inner, err
+	case LegacyTxType, WanLegacyTxType, WanTestnetTxType, WanPrivTxType, WanPosTxType:
+		var inner LegacyTx
+		err := rlp.DecodeBytes(b[:], &inner)
+		if err != nil {
+			fmt.Println("decodeTyped:", err)
+		}
 		return &inner, err
 	case DynamicFeeTxType:
 		var inner DynamicFeeTx
@@ -237,8 +249,12 @@ func isProtectedV(V *big.Int) bool {
 
 // Protected says whether the transaction is replay-protected.
 func (tx *Transaction) Protected() bool {
+	// return tx.v != nil && isProtectedV(tx.V)
+	// TODO what is this meaning?????????????
 	switch tx := tx.inner.(type) {
 	case *LegacyTx:
+		return tx.V != nil && isProtectedV(tx.V)
+	case *WanLegacyTx:
 		return tx.V != nil && isProtectedV(tx.V)
 	default:
 		return true
@@ -365,7 +381,7 @@ func (tx *Transaction) Hash() common.Hash {
 	}
 
 	var h common.Hash
-	if tx.Type() == LegacyTxType {
+	if tx.Type() == LegacyTxType || tx.Type() == WanLegacyTxType || tx.Type() == WanTestnetTxType || tx.Type() == WanPosTxType || tx.Type() == WanPrivTxType {
 		h = rlpHash(tx.inner)
 	} else {
 		h = prefixedRlpHash(tx.Type(), tx.inner)
@@ -409,7 +425,7 @@ func (s Transactions) Len() int { return len(s) }
 // constructed by decoding or via public API in this package.
 func (s Transactions) EncodeIndex(i int, w *bytes.Buffer) {
 	tx := s[i]
-	if tx.Type() == LegacyTxType {
+	if tx.Type() == LegacyTxType || tx.Type() == WanLegacyTxType || tx.Type() == WanTestnetTxType || tx.Type() == WanPosTxType || tx.Type() == WanPrivTxType {
 		rlp.Encode(w, tx.inner)
 	} else {
 		tx.encodeTyped(w)
@@ -574,9 +590,11 @@ type Message struct {
 	data       []byte
 	accessList AccessList
 	isFake     bool
+	checkNonce bool
+	txType     uint64
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, isFake bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, isFake bool, checkNonce bool) Message {
 	return Message{
 		from:       from,
 		to:         to,
@@ -589,6 +607,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		data:       data,
 		accessList: accessList,
 		isFake:     isFake,
+		checkNonce: checkNonce,
 	}
 }
 
@@ -603,8 +622,10 @@ func (tx *Transaction) AsMessage(s Signer, baseFee *big.Int) (Message, error) {
 		to:         tx.To(),
 		amount:     tx.Value(),
 		data:       tx.Data(),
+		txType:     uint64(tx.Type()),
 		accessList: tx.AccessList(),
 		isFake:     false,
+		checkNonce: true,
 	}
 	// If baseFee provided, set gasPrice to effectiveGasPrice.
 	if baseFee != nil {
@@ -626,6 +647,9 @@ func (m Message) Nonce() uint64          { return m.nonce }
 func (m Message) Data() []byte           { return m.data }
 func (m Message) AccessList() AccessList { return m.accessList }
 func (m Message) IsFake() bool           { return m.isFake }
+func (m Message) CheckNonce() bool       { return m.checkNonce }
+
+func (m Message) TxType() uint64         { return m.txType }
 
 // copyAddressPtr copies an address.
 func copyAddressPtr(a *common.Address) *common.Address {

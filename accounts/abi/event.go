@@ -98,3 +98,8 @@ func NewEvent(name, rawName string, anonymous bool, inputs Arguments) Event {
 func (e Event) String() string {
 	return e.str
 }
+
+// add by Jacob
+func (e Event) Id() common.Hash {
+	return e.ID
+}

@@ -524,6 +524,10 @@ func (w *wallet) signHash(account accounts.Account, hash []byte) ([]byte, error)
 	return nil, accounts.ErrNotSupported
 }
 
+func (w *wallet) SignHash(account accounts.Account, hash []byte) ([]byte, error) {
+	return w.signHash(account, hash)
+}
+
 // SignData signs keccak256(data). The mimetype parameter describes the type of data being signed
 func (w *wallet) SignData(account accounts.Account, mimeType string, data []byte) ([]byte, error) {
 

@@ -357,7 +357,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != LegacyTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 	if !tx.Protected() {
@@ -375,7 +375,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != LegacyTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
 	R, S, V = decodeSignature(sig)
@@ -390,6 +390,7 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
+		tx.Type(), // TODO MERGE gwan
 		tx.Nonce(),
 		tx.GasPrice(),
 		tx.Gas(),
@@ -420,7 +421,7 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != LegacyTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 	v, r, s := tx.RawSignatureValues()
@@ -460,6 +461,7 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
+		tx.Type(),
 		tx.Nonce(),
 		tx.GasPrice(),
 		tx.Gas(),

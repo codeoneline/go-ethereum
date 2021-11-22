@@ -19,6 +19,8 @@ package miner
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"math/big"
 	"sync"
 	"time"
@@ -33,12 +35,17 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
 )
 
 // Backend wraps all methods required for mining.
 type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
+
+	AccountManager() *accounts.Manager
+	ChainDb() ethdb.Database
+	Etherbase() (common.Address, error)
 }
 
 // Config is the configuration parameters of mining.
@@ -65,7 +72,7 @@ type Miner struct {
 	startCh  chan common.Address
 	stopCh   chan struct{}
 
-	wg sync.WaitGroup
+	mu sync.Mutex
 }
 
 func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, isLocalBlock func(block *types.Block) bool) *Miner {
@@ -78,7 +85,10 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 		stopCh:  make(chan struct{}),
 		worker:  newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true),
 	}
-	miner.wg.Add(1)
+
+	eth.BlockChain().RegisterSwitchEngine(miner)
+	posPreInit(eth)
+
 	go miner.update()
 	return miner
 }
@@ -88,7 +98,7 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 // the loop is exited. This to prevent a major security vuln where external parties can DOS you with blocks
 // and halt your mining operation for as long as the DOS continues.
 func (miner *Miner) update() {
-	defer miner.wg.Done()
+	//defer miner.wg.Done()
 
 	events := miner.mux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
 	defer func() {
@@ -159,7 +169,7 @@ func (miner *Miner) Stop() {
 
 func (miner *Miner) Close() {
 	close(miner.exitCh)
-	miner.wg.Wait()
+	//miner.wg.Wait()
 }
 
 func (miner *Miner) Mining() bool {
@@ -237,4 +247,14 @@ func (miner *Miner) DisablePreseal() {
 // to the given channel.
 func (miner *Miner) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription {
 	return miner.worker.pendingLogsFeed.Subscribe(ch)
+}
+
+func (self *Miner) SwitchEngine(engine consensus.Engine) {
+	self.engine = engine
+	//time.Sleep(1000*time.Millisecond)
+	log.Info("SwitchEngine")
+	if posconfig.MineEnabled {
+		log.Info("SwitchEngine, start backendTimerLoop")
+		go self.backendTimerLoop(self.eth)
+	}
 }

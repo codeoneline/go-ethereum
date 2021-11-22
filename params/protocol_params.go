@@ -19,11 +19,14 @@ package params
 import "math/big"
 
 const (
-	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
+	TxDataNonZeroGas uint64 = 68 // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
+	// move from const to var by Jacob, because CalcGasLimit need to change GasLimitBoundDivisor
+	//GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
+	//MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
+	//GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
+
+	//MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
@@ -162,8 +165,18 @@ const (
 var Bls12381MultiExpDiscountTable = [128]uint64{1200, 888, 764, 641, 594, 547, 500, 453, 438, 423, 408, 394, 379, 364, 349, 334, 330, 326, 322, 318, 314, 310, 306, 302, 298, 294, 289, 285, 281, 277, 273, 269, 268, 266, 265, 263, 262, 260, 259, 257, 256, 254, 253, 251, 250, 248, 247, 245, 244, 242, 241, 239, 238, 236, 235, 233, 232, 231, 229, 228, 226, 225, 223, 222, 221, 220, 219, 219, 218, 217, 216, 216, 215, 214, 213, 213, 212, 211, 211, 210, 209, 208, 208, 207, 206, 205, 205, 204, 203, 202, 202, 201, 200, 199, 199, 198, 197, 196, 196, 195, 194, 193, 193, 192, 191, 191, 190, 189, 188, 188, 187, 186, 185, 185, 184, 183, 182, 182, 181, 180, 179, 179, 178, 177, 176, 176, 175, 174}
 
 var (
-	DifficultyBoundDivisor = big.NewInt(2048)   // The bound divisor of the difficulty, used in the update calculations.
-	GenesisDifficulty      = big.NewInt(131072) // Difficulty of the Genesis block.
-	MinimumDifficulty      = big.NewInt(131072) // The minimum that the difficulty may ever be.
-	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	GasLimitBoundDivisor    uint64 = 1024 // The bound divisor of the gas limit, used in update calculations.
+	GasLimitBoundDivisorNew uint64 = 300  // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit             uint64 = 5000 // Minimum the gas limit may ever be.
+	MaxGasLimit                    = big.NewInt(105000000)
+	GenesisGasLimit         uint64 = 4712388                            // Gas limit of the Genesis block.
+	NewTargeGasLimit               = big.NewInt(10000000)               // Gas limit raise to 1000w
+	TargetGasLimit                 = new(big.Int).Set(NewTargeGasLimit) // The artificial target
+	DifficultyBoundDivisor         = big.NewInt(2048)                   // The bound divisor of the difficulty, used in the update calculations.
+	GenesisDifficulty              = big.NewInt(131072)                 // Difficulty of the Genesis block.
+	MinimumDifficulty              = big.NewInt(131072)                 // The minimum that the difficulty may ever be.
+	DurationLimit                  = big.NewInt(13)                     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	WanGasTimesFactor              = big.NewInt(10)
+
+	//WanGasTimesFactor	   = big.NewInt(1)
 )

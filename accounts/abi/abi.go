@@ -86,8 +86,8 @@ func (abi ABI) getArguments(name string, data []byte) (Arguments, error) {
 	// we need to decide whether we're calling a method or an event
 	var args Arguments
 	if method, ok := abi.Methods[name]; ok {
-		if len(data)%32 != 0 {
-			return nil, fmt.Errorf("abi: improperly formatted output: %s - Bytes: [%+v]", string(data), data)
+		if len(data)%32 != 0 { // MMMMM TODO why?
+			//return nil, fmt.Errorf("abi: improperly formatted output: %s - Bytes: [%+v]", string(data), data)
 		}
 		args = method.Outputs
 	}
@@ -116,6 +116,25 @@ func (abi ABI) UnpackIntoInterface(v interface{}, name string, data []byte) erro
 	args, err := abi.getArguments(name, data)
 	if err != nil {
 		return err
+	}
+	unpacked, err := args.Unpack(data)
+	if err != nil {
+		return err
+	}
+	return args.Copy(v, unpacked)
+}
+
+// add by jacob
+func (abi ABI) UnpackIntoInterfaceWan(v interface{}, name string, data []byte) error {
+
+	var args Arguments
+	if method, ok := abi.Methods[name]; ok {
+		if len(data)%32 != 0 {
+			return fmt.Errorf("abi: improperly formatted output")
+		}
+		args = method.Inputs
+	} else if event, ok := abi.Events[name]; ok {
+		args = event.Inputs
 	}
 	unpacked, err := args.Unpack(data)
 	if err != nil {

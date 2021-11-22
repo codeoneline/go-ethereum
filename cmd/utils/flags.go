@@ -136,7 +136,7 @@ var (
 	}
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Explicitly set network id (integer)(For testnets: use --ropsten, --rinkeby, --goerli instead)",
+		Usage: "Explicitly set network id (integer)(For testnets: use --testnet, --rinkeby, --goerli instead)",
 		Value: ethconfig.Defaults.NetworkId,
 	}
 	MainnetFlag = cli.BoolFlag{
@@ -152,8 +152,8 @@ var (
 		Usage: "Rinkeby network: pre-configured proof-of-authority test network",
 	}
 	RopstenFlag = cli.BoolFlag{
-		Name:  "ropsten",
-		Usage: "Ropsten network: pre-configured proof-of-work test network",
+		Name:  "testnet",
+		Usage: "Testnet network: pre-configured proof-of-work test network",
 	}
 	DeveloperFlag = cli.BoolFlag{
 		Name:  "dev",
@@ -629,7 +629,7 @@ var (
 	ListenPortFlag = cli.IntFlag{
 		Name:  "port",
 		Usage: "Network listening port",
-		Value: 30303,
+		Value: 17717,
 	}
 	BootnodesFlag = cli.StringFlag{
 		Name:  "bootnodes",
@@ -845,7 +845,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case ctx.GlobalIsSet(BootnodesFlag.Name):
 		urls = SplitAndTrim(ctx.GlobalString(BootnodesFlag.Name))
 	case ctx.GlobalBool(RopstenFlag.Name):
-		urls = params.RopstenBootnodes
+		urls = params.TestnetBootnodes
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		urls = params.RinkebyBootnodes
 	case ctx.GlobalBool(GoerliFlag.Name):
@@ -1596,8 +1596,8 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
-		cfg.Genesis = core.DefaultRopstenGenesisBlock()
-		SetDNSDiscoveryDefaults(cfg, params.RopstenGenesisHash)
+		cfg.Genesis = core.DefaultTestnetGenesisBlock()
+		SetDNSDiscoveryDefaults(cfg, params.TestnetGenesisHash)
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 4
@@ -1825,7 +1825,7 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	case ctx.GlobalBool(MainnetFlag.Name):
 		genesis = core.DefaultGenesisBlock()
 	case ctx.GlobalBool(RopstenFlag.Name):
-		genesis = core.DefaultRopstenGenesisBlock()
+		genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		genesis = core.DefaultRinkebyGenesisBlock()
 	case ctx.GlobalBool(GoerliFlag.Name):

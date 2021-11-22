@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"bytes"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -43,19 +44,40 @@ type (
 
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	var precompiles map[common.Address]PrecompiledContract
-	switch {
-	case evm.chainRules.IsBerlin:
-		precompiles = PrecompiledContractsBerlin
-	case evm.chainRules.IsIstanbul:
-		precompiles = PrecompiledContractsIstanbul
-	case evm.chainRules.IsByzantium:
-		precompiles = PrecompiledContractsByzantium
-	default:
-		precompiles = PrecompiledContractsHomestead
-	}
+	//switch {
+	//case evm.chainRules.IsBerlin:
+	//	precompiles = PrecompiledContractsBerlin
+	//case evm.chainRules.IsIstanbul:
+	//	precompiles = PrecompiledContractsIstanbul
+	//case evm.chainRules.IsByzantium:
+	//	precompiles = PrecompiledContractsByzantium
+	//default:
+	//	precompiles = PrecompiledContractsHomestead
+	//}
+
+	// add by Jacob
+	precompiles = PrecompiledContractsWanchain
 	p, ok := precompiles[addr]
 	return p, ok
 }
+
+//// run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
+//func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
+//	for _, interpreter := range evm.interpreters {
+//		if interpreter.CanRun(contract.Code) {
+//			if evm.interpreter != interpreter {
+//				// Ensure that the interpreter pointer is set back
+//				// to its current value upon return.
+//				defer func(i Interpreter) {
+//					evm.interpreter = i
+//				}(evm.interpreter)
+//				evm.interpreter = interpreter
+//			}
+//			return interpreter.Run(contract, input, readOnly)
+//		}
+//	}
+//	return nil, errors.New("no compatible interpreter")
+//}
 
 // BlockContext provides the EVM with auxiliary information. Once provided
 // it shouldn't be modified.
@@ -190,7 +212,10 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
-	evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+
+	if !bytes.Equal(addr.Bytes(), wanCoinPrecompileAddr.Bytes()) && !bytes.Equal(addr.Bytes(), wanStampPrecompileAddr.Bytes()) {
+		evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+	}
 
 	// Capture the tracer start/end events in debug mode
 	if evm.Config.Debug {
@@ -209,7 +234,8 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 	if isPrecompile {
-		ret, gas, err = RunPrecompiledContract(p, input, gas)
+		contract := NewContract(caller, AccountRef(addr), value, gas)
+		ret, gas, err = RunPrecompiledContract(p, input, gas, contract, evm)
 	} else {
 		// Initialise a new contract and set the code that is to be used by the EVM.
 		// The contract is a scoped environment for this execution context only.
@@ -275,7 +301,8 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 
 	// It is allowed to call precompiles, even via delegatecall
 	if p, isPrecompile := evm.precompile(addr); isPrecompile {
-		ret, gas, err = RunPrecompiledContract(p, input, gas)
+		contract := NewContract(caller, AccountRef(addr), value, gas)
+		ret, gas, err = RunPrecompiledContract(p, input, gas, contract, evm)
 	} else {
 		addrCopy := addr
 		// Initialise a new contract and set the code that is to be used by the EVM.
@@ -319,7 +346,8 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 
 	// It is allowed to call precompiles, even via delegatecall
 	if p, isPrecompile := evm.precompile(addr); isPrecompile {
-		ret, gas, err = RunPrecompiledContract(p, input, gas)
+		contract := NewContract(caller, AccountRef(addr), big.NewInt(0), gas)
+		ret, gas, err = RunPrecompiledContract(p, input, gas, contract, evm)
 	} else {
 		addrCopy := addr
 		// Initialise a new contract and make initialise the delegate values
@@ -371,7 +399,8 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	}
 
 	if p, isPrecompile := evm.precompile(addr); isPrecompile {
-		ret, gas, err = RunPrecompiledContract(p, input, gas)
+		contract := NewContract(caller, AccountRef(addr), big.NewInt(0), gas)
+		ret, gas, err = RunPrecompiledContract(p, input, gas, contract, evm)
 	} else {
 		// At this point, we use a copy of address. If we don't, the go compiler will
 		// leak the 'contract' to the outer scope, and make allocation for 'contract'

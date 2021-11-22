@@ -204,13 +204,32 @@ type BlockChain struct {
 	running       int32          // 0 if chain is running, 1 when stopped
 	procInterrupt int32          // interrupt signaler for block processing
 
-	engine     consensus.Engine
+	engine    consensus.Engine
+	posEngine consensus.Engine
+	agents    []consensus.EngineSwitcher
+
 	validator  Validator // Block and state validator interface
 	prefetcher Prefetcher
 	processor  Processor // Block transaction processor interface
 	vmConfig   vm.Config
 
-	shouldPreserve func(*types.Block) bool // Function used to determine whether should preserve the given block.
+	shouldPreserve  func(*types.Block) bool        // Function used to determine whether should preserve the given block.
+	terminateInsert func(common.Hash, uint64) bool // Testing hook used to terminate ancient receipt chain insertion.
+
+	badBlocks *lru.Cache // Bad block cache
+
+	CurrentEpochId int64
+
+	slotValidator Validator
+
+	checkCQStartSlot uint64 //use this field to check restart status,the value will be 0:init restarting, bigger than 0:in restarting,minus:restart scucess
+	checkCQBlk       *types.Block
+
+	cqCache    *lru.ARCCache
+	cqLastSlot uint64
+
+	stopSlot      uint64 //the best peer's latest slot
+	restartSucess bool
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -258,6 +277,9 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	if err != nil {
 		return nil, err
 	}
+
+	bc.RegisterSwitchEngine(bc.hc)
+
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
@@ -407,6 +429,13 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	}
 	return bc, nil
 }
+
+// add by Jacob
+func (bc *BlockChain) GetHc() *HeaderChain {
+	return bc.hc
+}
+
+
 
 // empty returns an indicator whether the blockchain is empty.
 // Note, it's a special case that we connect a non-empty ancient
@@ -876,6 +905,38 @@ const (
 	CanonStatTy
 	SideStatTy
 )
+
+// truncateAncient rewinds the blockchain to the specified header and deletes all
+// data in the ancient store that exceeds the specified header.
+func (bc *BlockChain) truncateAncient(head uint64) error {
+	frozen, err := bc.db.Ancients()
+	if err != nil {
+		return err
+	}
+	// Short circuit if there is no data to truncate in ancient store.
+	if frozen <= head+1 {
+		return nil
+	}
+	// Truncate all the data in the freezer beyond the specified head
+	if err := bc.db.TruncateAncients(head + 1); err != nil {
+		return err
+	}
+	// Clear out any stale content from the caches
+	bc.hc.headerCache.Purge()
+	bc.hc.tdCache.Purge()
+	bc.hc.numberCache.Purge()
+
+	// Clear out any stale content from the caches
+	bc.bodyCache.Purge()
+	bc.bodyRLPCache.Purge()
+	bc.receiptsCache.Purge()
+	bc.blockCache.Purge()
+	bc.txLookupCache.Purge()
+	bc.futureBlocks.Purge()
+
+	log.Info("Rewind ancient data", "number", head)
+	return nil
+}
 
 // numberHash is just a container for a number and a hash, to represent a block
 type numberHash struct {
@@ -1628,7 +1689,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		// Validate the state using the default validator
 		substart = time.Now()
 		if err := bc.validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
-			bc.reportBlock(block, receipts, err)
+			//bc.reportBlock(block, receipts, err)  // TODO MMMMMMMM why??
 			atomic.StoreUint32(&followupInterrupt, 1)
 			return it.index, err
 		}
@@ -2144,4 +2205,11 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	defer bc.chainmu.Unlock()
 	_, err := bc.hc.InsertHeaderChain(chain, start)
 	return 0, err
+}
+func (bc *BlockChain) RegisterSwitchEngine(agent consensus.EngineSwitcher) {
+	bc.agents = append(bc.agents, agent)
+}
+
+func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher) {
+	bc.agents = append([]consensus.EngineSwitcher{agent}, bc.agents...)
 }

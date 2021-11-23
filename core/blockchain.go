@@ -42,6 +42,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	posUtil "github.com/ethereum/go-ethereum/pos/util"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
@@ -1607,7 +1609,37 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	} else {
 		bc.chainSideFeed.Send(ChainSideEvent{Block: block})
 	}
+
+	if status == CanonStatTy {
+		epid, slotId := posUtil.CalEpochSlotID(block.Time())
+
+		if bc.Config().IsPosActive {
+			posUtil.UpdateEpochBlock(block)
+
+			flatSlotId := epid*posconfig.SlotCount + slotId
+			bc.cqCache.Add(flatSlotId, block.Number().Uint64())
+			bc.cqLastSlot = flatSlotId
+
+		}
+	}
+
+	if bc.IsInPosStage() && !bc.Config().IsPosActive {
+		bc.Config().SetPosActive()
+	}
+
+	if bc.isCurrentLastPPowBlock() {
+		bc.CurrentEpochId = -1
+		log.Info("ppow2pos", "", "will switch engine......")
+		bc.SwitchClientEngine()
+	}
+
 	return status, nil
+}
+
+func (bc *BlockChain) isCurrentLastPPowBlock() bool {
+	num := bc.CurrentBlock().Number()
+	num = num.Add(num, big.NewInt(1))
+	return num.Cmp(bc.Config().PosFirstBlock) == 0
 }
 
 // addFutureBlock checks if the block is within the max allowed window to get

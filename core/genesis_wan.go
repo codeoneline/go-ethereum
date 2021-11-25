@@ -60,7 +60,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	}
 }
 
-/*
+
 
 
 // DefaultInternalGenesisBlock returns the Rinkeby network genesis block.
@@ -87,7 +87,7 @@ func DefaultPlutoGenesisBlock() *Genesis {
 		Alloc:      jsonPrealloc(PlutoAllocJson),
 	}
 }
-*/
+
 
 /*
 1 wanfoundation address:1０％,６％,３％

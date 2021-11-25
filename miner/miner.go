@@ -161,6 +161,9 @@ func (miner *Miner) update() {
 
 func (miner *Miner) Start(coinbase common.Address) {
 	miner.startCh <- coinbase
+	if miner.eth.BlockChain().Config().IsPosActive || miner.eth.BlockChain().IsInPosStage() {
+		go miner.backendTimerLoop(miner.eth)
+	}
 }
 
 func (miner *Miner) Stop() {

@@ -69,7 +69,7 @@ const (
 	// TODO: recovery K and time
 	// K count of each epoch
 	KCount = 12
-	K      = 1440
+	K      = 10
 
 	// SlotCount is slot count in an epoch
 	SlotCount = K * KCount
@@ -238,7 +238,7 @@ func Init(nodeCfg *node.Config, networkId uint64) {
 			// TODO: for debug change WhiteListDev -> WhiteListMainnet
 			WhiteList = WhiteListDev // only one whiteAccount, used as single node.
 		} else {
-			WhiteList = WhiteListOrig
+			WhiteList = WhiteListDev // WhiteListOrig this is multi validator, hard to config.
 		}
 		DefaultConfig.MercuryEpochId = TestnetMercuryEpochId
 		DefaultConfig.VenusEpochId = TestnetVenusEpochId

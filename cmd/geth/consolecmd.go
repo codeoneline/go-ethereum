@@ -128,10 +128,14 @@ func remoteConsole(ctx *cli.Context) error {
 				if _, err := os.Stat(legacyPath); !os.IsNotExist(err) {
 					path = legacyPath
 				} else {
-					path = filepath.Join(path, "testnet")
+					path = filepath.Join(path, "ropsten")
 				}
 			} else if ctx.GlobalBool(utils.RinkebyFlag.Name) {
 				path = filepath.Join(path, "rinkeby")
+			} else if ctx.GlobalBool(utils.TestnetFlag.Name) {
+				path = filepath.Join(path, "testnet")
+			} else if ctx.GlobalBool(utils.PlutoFlag.Name) {
+				path = filepath.Join(path, "pluto")
 			} else if ctx.GlobalBool(utils.GoerliFlag.Name) {
 				path = filepath.Join(path, "goerli")
 			}

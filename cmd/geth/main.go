@@ -137,6 +137,8 @@ var (
 		utils.DeveloperPeriodFlag,
 		utils.RopstenFlag,
 		utils.RinkebyFlag,
+		utils.TestnetFlag,
+		utils.PlutoFlag,
 		utils.GoerliFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,

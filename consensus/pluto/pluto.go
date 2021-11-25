@@ -19,7 +19,9 @@ package pluto
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/trie"
+	"io"
 	"math"
 	"math/big"
 
@@ -42,7 +44,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
+	//"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -52,6 +54,8 @@ import (
 	posUtil "github.com/ethereum/go-ethereum/pos/util"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"golang.org/x/crypto/sha3"
+
 )
 
 const (
@@ -157,12 +161,12 @@ type SignerFn func(accounts.Account, []byte) ([]byte, error)
 // panics. This is done to avoid accidentally using both forms (signature present
 // or not), which could be abused to produce different hashes for the same header.
 func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
+	hasher := sha3.NewLegacyKeccak256()
 
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
-		header.Coinbase,
+		//header.Coinbase,
 		header.Root,
 		header.TxHash,
 		header.ReceiptHash,
@@ -172,11 +176,12 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra[:len(header.Extra)-extraSeal], // Yes, this will panic if extra is too short
+		//header.Extra[:len(header.Extra)-extraSeal], // Yes, this will panic if extra is too short
 		header.MixDigest,
 		header.Nonce,
 	})
 	hasher.Sum(hash[:0])
+	fmt.Println("========================header:", header)
 	return hash
 }
 
@@ -955,6 +960,15 @@ func (c *Pluto) Seal(chain consensus.ChainHeaderReader, block *types.Block, resu
 		return err
 	}
 	lastEpochSlotId = epochSlotId
+
+	go func() {
+		select {
+		case results <- block.WithSeal(header):
+		default:
+			log.Warn("Sealing result is not read by miner", "sealhash", c.SealHash(header))
+		}
+	}()
+
 	return nil
 }
 
@@ -1003,6 +1017,39 @@ func (c *Pluto) Close() error {
 }
 
 func (ethash *Pluto) SealHash(header *types.Header) (hash common.Hash) {
+	//hasher := sha3.NewLegacyKeccak256()
+	//encodeSigHeader(hasher, header)
+	//hasher.(crypto.KeccakState).Read(hash[:])
+	//return hash
+	return sigHash(header)
+
 	//todo Think it over
-	return common.Hash{}
+	// return common.Hash{}
+}
+func encodeSigHeader(w io.Writer, header *types.Header) {
+	enc := []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra[:len(header.Extra)-crypto.SignatureLength], // Yes, this will panic if extra is too short
+		header.MixDigest,
+		header.Nonce,
+	}
+
+
+	if header.BaseFee != nil {
+		enc = append(enc, header.BaseFee)
+	}
+	if err := rlp.Encode(w, enc); err != nil {
+		panic("can't encode: " + err.Error())
+	}
 }

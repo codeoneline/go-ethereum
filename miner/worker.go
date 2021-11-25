@@ -481,6 +481,9 @@ func (w *worker) mainLoop() {
 		case req := <-w.newWorkCh:
 			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
 
+		case slotTime := <-w.chainSlotTimer:
+			w.commitNewWork(nil, false, int64(slotTime))
+
 		case ev := <-w.chainSideCh:
 			// Short circuit for duplicate side blocks
 			if _, exist := w.localUncles[ev.Block.Hash()]; exist {
@@ -605,13 +608,17 @@ func (w *worker) taskLoop() {
 			if w.skipSealHook != nil && w.skipSealHook(task) {
 				continue
 			}
-			w.pendingMu.Lock()
-			w.pendingTasks[sealHash] = task
-			w.pendingMu.Unlock()
 
 			if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
 				log.Warn("Block sealing failed", "err", err)
+				continue
 			}
+			sealHash = w.engine.SealHash(task.block.Header())
+			log.Warn("xxxxxxxxxxxxxxxxxxxxxxxxxxxx block task insert", "sealHash", sealHash.String())
+
+			w.pendingMu.Lock()
+			w.pendingTasks[sealHash] = task
+			w.pendingMu.Unlock()
 		case <-w.exitCh:
 			interrupt()
 			return
@@ -641,6 +648,7 @@ func (w *worker) resultLoop() {
 			w.pendingMu.RLock()
 			task, exist := w.pendingTasks[sealhash]
 			w.pendingMu.RUnlock()
+			log.Warn("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxblock task get", "sealHash", sealhash.String())
 			if !exist {
 				log.Error("Block found but no relative pending task", "number", block.Number(), "sealhash", sealhash, "hash", hash)
 				continue

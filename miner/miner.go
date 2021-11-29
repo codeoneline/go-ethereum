@@ -87,6 +87,7 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 	}
 
 	eth.BlockChain().RegisterSwitchEngine(miner)
+	//todo check whether need to add  eth.BlockChain().RegisterSwitchEngine(cpuAgent)
 	posPreInit(eth)
 
 	go miner.update()

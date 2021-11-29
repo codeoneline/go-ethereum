@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -221,6 +222,8 @@ func newHandler(config *handlerConfig) (*handler, error) {
 	}
 	h.blockFetcher = fetcher.NewBlockFetcher(false, nil, h.chain.GetBlockByHash, validator, h.BroadcastBlock, heighter, nil, inserter, h.removePeer)
 
+	h.chain.RegisterSwitchEngine(h)
+
 	fetchTx := func(peer string, hashes []common.Hash) error {
 		p := h.peers.peer(peer)
 		if p == nil {
@@ -346,6 +349,15 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	}
 	// Handle incoming messages until the connection is torn down
 	return handler(peer)
+}
+
+func (h *handler) SwitchEngine(engine consensus.Engine) {
+	validator := func(header *types.Header) error {
+		return h.chain.Engine().VerifyHeader(h.chain, header, true)
+	}
+
+	h.blockFetcher.UpdateValidator(validator)
+	//todo need updateValidator for TXFetcher??
 }
 
 // runSnapExtension registers a `snap` peer into the joint eth/snap peerset and

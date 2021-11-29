@@ -41,11 +41,15 @@ type StateProcessor struct {
 
 // NewStateProcessor initialises a new StateProcessor.
 func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consensus.Engine) *StateProcessor {
-	return &StateProcessor{
+	sp := &StateProcessor{
 		config: config,
 		bc:     bc,
 		engine: engine,
 	}
+
+	bc.RegisterSwitchEngine(sp)
+	return sp
+
 }
 
 func (p *StateProcessor) SwitchEngine(engine consensus.Engine) {

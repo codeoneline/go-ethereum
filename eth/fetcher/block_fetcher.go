@@ -882,3 +882,8 @@ func (f *BlockFetcher) forgetBlock(hash common.Hash) {
 		delete(f.queued, hash)
 	}
 }
+
+// add by Jacob
+func (f *BlockFetcher) UpdateValidator(verifyHeader headerVerifierFn) {
+	f.verifyHeader = verifyHeader
+}

@@ -251,6 +251,9 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	if init {
 		worker.startCh <- struct{}{}
 	}
+
+	eth.BlockChain().RegisterSwitchEngine(worker)
+
 	return worker
 }
 

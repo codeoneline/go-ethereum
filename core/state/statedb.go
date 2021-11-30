@@ -837,7 +837,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 
 	//todo add by Jacob for debug begin
-	log.Info("IntermediateRoot", "before IntermediateRoot hash", s.trie.Hash().Hex())
+	//log.Info("IntermediateRoot", "before IntermediateRoot hash", s.trie.Hash().Hex())
 	//todo add by Jacob for debug end
 
 	// Finalise all the dirty storage states and write them into the tries
@@ -866,7 +866,7 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 		if obj := s.stateObjects[addr]; !obj.deleted {
 			// add by Jacob
 			obj.updateRoot(s.db)
-			log.Info("IntermediateRoot", "********** IntermediateRoot hash", s.trie.Hash().Hex(), "addr", addr.String())
+			//log.Info("IntermediateRoot", "********** IntermediateRoot hash", s.trie.Hash().Hex(), "addr", addr.String())
 		}
 	}
 	// Now we're about to start to write changes to the trie. The trie is so far
@@ -901,7 +901,7 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	}
 
 	//todo add by Jacob for debug begin
-	log.Info("IntermediateRoot", "after IntermediateRoot hash", s.trie.Hash().Hex())
+	//log.Info("IntermediateRoot", "after IntermediateRoot hash", s.trie.Hash().Hex())
 	//todo add by Jacob for debug end
 	return s.trie.Hash()
 }

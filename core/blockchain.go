@@ -275,6 +275,12 @@ func NewBlockChain(db ethdb.Database,
 		vmConfig:       vmConfig,
 	}
 
+	c, e := lru.NewARC(posconfig.SlotSecurityParam)
+	if e != nil || c == nil {
+		panic("failed to create chain quality cache")
+	}
+	bc.cqCache = c
+
 	if len(posEngines) > 0 {
 		bc.posEngine = posEngines[0]
 	} else {

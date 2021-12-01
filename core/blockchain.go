@@ -460,8 +460,6 @@ func (bc *BlockChain) GetHc() *HeaderChain {
 	return bc.hc
 }
 
-
-
 // empty returns an indicator whether the blockchain is empty.
 // Note, it's a special case that we connect a non-empty ancient
 // database with an empty node, so that we can plugin the ancient
@@ -1423,7 +1421,7 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 			posUtil.UpdateEpochBlock(block)
 
 			flatSlotId := epid*posconfig.SlotCount + slotId
-//			bc.cqCache.Add(flatSlotId, block.Number().Uint64()) // TODO MERGE crash
+			//			bc.cqCache.Add(flatSlotId, block.Number().Uint64()) // TODO MERGE crash
 			bc.cqLastSlot = flatSlotId
 
 		}
@@ -1551,7 +1549,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 			posconfig.FirstEpochId = epochId
 		}
 	}
-	if(bc.engine == nil) {
+	if bc.engine == nil {
 		return 0, errors.New("engine is nil")
 	}
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
@@ -2274,4 +2272,9 @@ func (bc *BlockChain) RegisterSwitchEngine(agent consensus.EngineSwitcher) {
 
 func (bc *BlockChain) PrependRegisterSwitchEngine(agent consensus.EngineSwitcher) {
 	bc.agents = append([]consensus.EngineSwitcher{agent}, bc.agents...)
+}
+
+func (bc *BlockChain) ChainQuality(epochid uint64, slotid uint64) (uint64, error) {
+	//todo add chainquality code
+	return 0, nil
 }

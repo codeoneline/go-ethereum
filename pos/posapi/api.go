@@ -816,7 +816,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 		return 0, nil
 	}
 
-	epId := a.GetEpochIDByTime(lastHeader.Time.Uint64())
+	epId := a.GetEpochIDByTime(lastHeader.Time)
 	if epId < epochId {
 		return 0, nil
 	}
@@ -830,7 +830,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, errors.New("get header by number fail")
 		}
 
-		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		epId := a.GetEpochIDByTime(header.Time)
 		if epId > epochId {
 			fastEdBlkNum = curNum
 		} else if epId == epochId {
@@ -876,7 +876,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, errors.New("get header by number fail")
 		}
 
-		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		epId := a.GetEpochIDByTime(header.Time)
 		if epId == epochId {
 			break
 		} else if epId > epochId {
@@ -894,7 +894,7 @@ func (a PosApi) GetEpochBlkCnt(epochId uint64) (uint64, error) {
 			return 0, errors.New("get header by number fail")
 		}
 
-		epId := a.GetEpochIDByTime(header.Time.Uint64())
+		epId := a.GetEpochIDByTime(header.Time)
 		if epId == epochId {
 			break
 		} else if epId < epochId {
@@ -956,7 +956,7 @@ func (a PosApi) GetRbStage(slotId uint64) uint64 {
 func (a PosApi) GetEpochIdByBlockNumber(blockNumber uint64) uint64 {
 	header := a.chain.GetHeaderByNumber(blockNumber)
 	if header != nil {
-		ep, _ := util.CalEpochSlotID(header.Time.Uint64())
+		ep, _ := util.CalEpochSlotID(header.Time)
 		return ep
 	}
 	return uint64(0) ^ uint64(0)
@@ -993,11 +993,11 @@ func (a PosApi) GetTps(fromNumber uint64, toNumber uint64) (string, error) {
 			totalTx += uint64(len(block.Transactions()))
 
 			if i == fromNumber {
-				totalSecond = block.Time().Uint64()
+				totalSecond = block.Time()
 			}
 
 			if i == toNumber {
-				totalSecond = block.Time().Uint64() - totalSecond
+				totalSecond = block.Time() - totalSecond
 			}
 		}
 	}

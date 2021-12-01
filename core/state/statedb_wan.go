@@ -90,30 +90,30 @@ func (db *StateDB) ForEachStorageByteArrayBeforeFork(addr common.Address, cb fun
 	for it.Next() {
 		// ignore cached values
 		key := common.BytesToHash(db.trie.GetKey(it.Key))
-		if _, ok := so.dirtyStorageByteArray[key]; !ok {
-			if !cb(key, it.Value) {
-				return
-			}
-		}
-		if _, ok := so.originStorage[key]; !ok {
-			if !cb(key, it.Value) {
-				return
-			}
-		}
-		if _, ok := so.dirtyStorage[key]; !ok {
-			if !cb(key, it.Value) {
-				return
-			}
-		}
+		//if _, ok := so.dirtyStorageByteArray[key]; !ok {
+		//	if !cb(key, it.Value) {
+		//		return
+		//	}
+		//}
+		//if _, ok := so.originStorage[key]; !ok {
+		//	if !cb(key, it.Value) {
+		//		return
+		//	}
+		//}
+		//if _, ok := so.dirtyStorage[key]; !ok {
+		//	if !cb(key, it.Value) {
+		//		return
+		//	}
+		//}
 		if _, ok := so.pendingStorageByteArray[key]; !ok {
 			if !cb(key, it.Value) {
 				return
 			}
 		}
-		if _, ok := so.pendingStorage[key]; !ok {
-			if !cb(key, it.Value) {
-				return
-			}
-		}
+		//if _, ok := so.pendingStorage[key]; !ok {
+		//	if !cb(key, it.Value) {
+		//		return
+		//	}
+		//}
 	}
 }

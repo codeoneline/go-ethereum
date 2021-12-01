@@ -199,7 +199,14 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			Preimages:           config.Preimages,
 		}
 	)
-	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, chainConfig, eth.engine, vmConfig, eth.shouldPreserve, &config.TxLookupLimit)
+	eth.blockchain, err = core.NewBlockChain(chainDb,
+		cacheConfig,
+		chainConfig,
+		eth.engine,
+		vmConfig,
+		eth.shouldPreserve,
+		&config.TxLookupLimit,
+		posEngine)
 	if err != nil {
 		return nil, err
 	}

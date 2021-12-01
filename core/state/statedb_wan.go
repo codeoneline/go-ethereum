@@ -19,6 +19,8 @@ package state
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -39,9 +41,8 @@ func (self *StateDB) SetStateByteArray(addr common.Address, key common.Hash, val
 // cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key common.Hash, value []byte) bool) {
 
-	//epochid,_ := util.GetCurrentBlkEpochSlotID()
-
-	if true { // TODO  posconfig.Cfg().MercuryEpochId
+	epochid,_ := util.GetCurrentBlkEpochSlotID()
+	if epochid < posconfig.Cfg().MercuryEpochId {
 		db.ForEachStorageByteArrayBeforeFork(addr, cb)
 
 	} else {
@@ -89,7 +90,27 @@ func (db *StateDB) ForEachStorageByteArrayBeforeFork(addr common.Address, cb fun
 	for it.Next() {
 		// ignore cached values
 		key := common.BytesToHash(db.trie.GetKey(it.Key))
+		if _, ok := so.dirtyStorageByteArray[key]; !ok {
+			if !cb(key, it.Value) {
+				return
+			}
+		}
+		if _, ok := so.originStorage[key]; !ok {
+			if !cb(key, it.Value) {
+				return
+			}
+		}
 		if _, ok := so.dirtyStorage[key]; !ok {
+			if !cb(key, it.Value) {
+				return
+			}
+		}
+		if _, ok := so.pendingStorageByteArray[key]; !ok {
+			if !cb(key, it.Value) {
+				return
+			}
+		}
+		if _, ok := so.pendingStorage[key]; !ok {
 			if !cb(key, it.Value) {
 				return
 			}

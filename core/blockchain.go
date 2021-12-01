@@ -43,6 +43,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	posUtil "github.com/ethereum/go-ethereum/pos/util"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
 )
@@ -235,7 +237,15 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, shouldPreserve func(block *types.Block) bool, txLookupLimit *uint64) (*BlockChain, error) {
+func NewBlockChain(db ethdb.Database,
+	cacheConfig *CacheConfig,
+	chainConfig *params.ChainConfig,
+	engine consensus.Engine,
+	vmConfig vm.Config,
+	shouldPreserve func(block *types.Block) bool,
+	txLookupLimit *uint64,
+	posEngines ...consensus.Engine) (*BlockChain, error) {
+
 	if cacheConfig == nil {
 		cacheConfig = defaultCacheConfig
 	}
@@ -268,6 +278,19 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		engine:         engine,
 		vmConfig:       vmConfig,
 	}
+
+	c, e := lru.NewARC(posconfig.SlotSecurityParam)
+	if e != nil || c == nil {
+		panic("failed to create chain quality cache")
+	}
+	bc.cqCache = c
+
+	if len(posEngines) > 0 {
+		bc.posEngine = posEngines[0]
+	} else {
+		bc.posEngine = nil
+	}
+
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
 	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
 	bc.processor = NewStateProcessor(chainConfig, bc, engine)
@@ -368,7 +391,9 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	// The first thing the node will do is reconstruct the verification data for
 	// the head block (ethash cache or clique voting snapshot). Might as well do
 	// it in advance.
-	bc.engine.VerifyHeader(bc, bc.CurrentHeader(), true)
+
+	//todo need uncomment below code, need check header of Pow by pow engine, check header of pos by pos engine.
+	// bc.engine.VerifyHeader(bc, bc.CurrentHeader(), true)
 
 	// Check the current state of the block hashes and make sure that we do not have any of the bad blocks in our chain
 	for hash := range BadHashes {
@@ -1390,7 +1415,37 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	} else {
 		bc.chainSideFeed.Send(ChainSideEvent{Block: block})
 	}
+
+	if status == CanonStatTy {
+		epid, slotId := posUtil.CalEpochSlotID(block.Time())
+
+		if bc.Config().IsPosActive {
+			posUtil.UpdateEpochBlock(block)
+
+			flatSlotId := epid*posconfig.SlotCount + slotId
+//			bc.cqCache.Add(flatSlotId, block.Number().Uint64()) // TODO MERGE crash
+			bc.cqLastSlot = flatSlotId
+
+		}
+	}
+
+	if bc.IsInPosStage() && !bc.Config().IsPosActive {
+		bc.Config().SetPosActive()
+	}
+
+	if bc.isCurrentLastPPowBlock() {
+		bc.CurrentEpochId = -1
+		log.Info("ppow2pos", "", "will switch engine......")
+		bc.SwitchClientEngine()
+	}
+
 	return status, nil
+}
+
+func (bc *BlockChain) isCurrentLastPPowBlock() bool {
+	num := bc.CurrentBlock().Number()
+	num = num.Add(num, big.NewInt(1))
+	return num.Cmp(bc.Config().PosFirstBlock) == 0
 }
 
 // addFutureBlock checks if the block is within the max allowed window to get
@@ -1491,6 +1546,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 	for i, block := range chain {
 		headers[i] = block.Header()
 		seals[i] = verifySeals
+		if block.NumberU64() == posconfig.Pow2PosUpgradeBlockNumber {
+			epochId, _ := posUtil.CalEpSlbyTd(block.Difficulty().Uint64())
+			posconfig.FirstEpochId = epochId
+		}
+	}
+	if(bc.engine == nil) {
+		return 0, errors.New("engine is nil")
 	}
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)

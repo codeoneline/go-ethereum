@@ -224,11 +224,13 @@ func (e *Epocher) selectLeaders(r []byte, statedb *state.StateDB, epochId uint64
 	err = e.epochLeaderSelection(r, pa, epochId)
 	if err != nil {
 		e.reportSelectELFailed(epochId)
+		//return err
 	}
 
 	err = e.randomProposerSelection(r, pa, epochId)
 	if err != nil {
 		e.reportSelectRBPFailed(epochId)
+		//return err
 	}
 
 	return nil
@@ -600,6 +602,9 @@ func (e *Epocher) GetProposerBn256PK(epochID uint64, idx uint64, addr common.Add
 // TODO Is this  right?
 func CalEpochProbabilityStaker(staker *vm.StakerInfo, epochID uint64) (infors []vm.ClientProbability, totalProbability *big.Int, err error) {
 	if staker.StakingEpoch == 0 && staker.LockEpochs != 0 {
+		if posconfig.FirstEpochId == 0 {
+			panic("posconfig.FirstEpochId == 0")
+		}
 		staker.StakingEpoch = posconfig.FirstEpochId + 2
 		for j := 0; j < len(staker.Partners); j++ {
 			staker.Partners[j].StakingEpoch = posconfig.FirstEpochId + 2

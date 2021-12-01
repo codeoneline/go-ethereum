@@ -32,14 +32,14 @@ import (
 	"github.com/ethereum/go-ethereum/pos/epochLeader"
 	"github.com/ethereum/go-ethereum/pos/util"
 
+	lru "github.com/hashicorp/golang-lru"
+
+	"encoding/hex"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/hashicorp/golang-lru"
-
-	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -55,7 +55,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"golang.org/x/crypto/sha3"
-
 )
 
 const (
@@ -166,7 +165,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
-		//header.Coinbase,
+		header.Coinbase,
 		header.Root,
 		header.TxHash,
 		header.ReceiptHash,
@@ -176,7 +175,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		//header.Extra[:len(header.Extra)-extraSeal], // Yes, this will panic if extra is too short
+		header.Extra[:len(header.Extra)-extraSeal], // Yes, this will panic if extra is too short
 		header.MixDigest,
 		header.Nonce,
 	})
@@ -1021,10 +1020,33 @@ func (ethash *Pluto) SealHash(header *types.Header) (hash common.Hash) {
 	//encodeSigHeader(hasher, header)
 	//hasher.(crypto.KeccakState).Read(hash[:])
 	//return hash
-	return sigHash(header)
+	//return sigHash(header)
 
 	//todo Think it over
 	// return common.Hash{}
+
+	hasher := sha3.NewLegacyKeccak256()
+
+	rlp.Encode(hasher, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		//header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		//header.Extra[:len(header.Extra)-extraSeal], // Yes, this will panic if extra is too short
+		header.MixDigest,
+		header.Nonce,
+	})
+	hasher.Sum(hash[:0])
+	return hash
+
 }
 func encodeSigHeader(w io.Writer, header *types.Header) {
 	enc := []interface{}{

@@ -59,6 +59,9 @@ func PosInit(s Backend) *epochLeader.Epocher {
 	h := s.BlockChain().GetHeaderByNumber(s.BlockChain().Config().PosFirstBlock.Uint64())
 	if nil != h {
 		epochId, _ := util.CalEpSlbyTd(h.Difficulty.Uint64())
+		if epochId == 0 {
+			panic("epochId ->posconfig.FirstEpochId = === 0 ")
+		}
 		posconfig.FirstEpochId = epochId
 	}
 	epochSelector := epochLeader.NewEpocher(s.BlockChain())
@@ -152,6 +155,9 @@ func (self *Miner) backendTimerLoop(s Backend) {
 	} else {
 		epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
 		posconfig.FirstEpochId = epochID
+		if posconfig.FirstEpochId == 0 {
+			panic("posconfig.FirstEpochId == 0")
+		}
 		log.Info("backendTimerLoop first pos block exist :", "FirstEpochId", posconfig.FirstEpochId)
 		// todo: need not reset the slot leader.
 		//if epochID > posconfig.FirstEpochId+2 {
@@ -271,6 +277,9 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 			return true
 		}
 		posconfig.FirstEpochId = epochID
+		if posconfig.FirstEpochId == 0 {
+			panic("epochId ->posconfig.FirstEpochId = === 0 ")
+		}
 		log.Info("backendTimerLoop :", "FirstEpochId", posconfig.FirstEpochId)
 
 		self.worker.chainSlotTimer <- slotTime
@@ -296,6 +305,9 @@ func (self *Miner) posStartInit(s Backend, localPublicKey string) (stop bool) {
 		} else {
 			epochID, slotID = util.CalEpSlbyTd(h.Difficulty.Uint64())
 			posconfig.FirstEpochId = epochID
+			if posconfig.FirstEpochId == 0 {
+				panic("epochId ->posconfig.FirstEpochId = === 0 ")
+			}
 			log.Info("backendTimerLoop download the first pos block :", "FirstEpochId", posconfig.FirstEpochId)
 
 			break

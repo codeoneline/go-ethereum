@@ -201,6 +201,9 @@ type BlockChain interface {
 
 	// Snapshots returns the blockchain snapshot tree to paused it during sync.
 	Snapshots() *snapshot.Tree
+
+	// add by jacob for syncWithPeer function
+	GetFirstPosBlockNumber() uint64
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -480,6 +483,24 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	if d.syncStatsChainHeight <= origin || d.syncStatsChainOrigin > origin {
 		d.syncStatsChainOrigin = origin
 	}
+
+	// add by jacob begin
+	//onlyPow := 0
+	posFirst := d.blockchain.GetFirstPosBlockNumber()
+	if origin+1 < posFirst {
+		if height > posFirst {
+			height = posFirst - 1
+
+			//latest, td, err = d.fetchHeaderTd(p, height)
+			//if err != nil {
+			//	log.Debug("fetchHeaderTd error", "err", err)
+			//	return err
+			//}
+		}
+		//	onlyPow = 1
+	}
+	// add by jacob end.
+
 	d.syncStatsChainHeight = height
 	d.syncStatsLock.Unlock()
 

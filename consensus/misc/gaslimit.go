@@ -19,7 +19,6 @@ package misc
 import (
 	"errors"
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/params"
 )
 

@@ -19,6 +19,7 @@ package miner
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -255,6 +256,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	if init {
 		worker.startCh <- struct{}{}
 	}
+	eth.BlockChain().RegisterSwitchEngine(worker)
 	return worker
 }
 
@@ -479,7 +481,10 @@ func (w *worker) mainLoop() {
 	for {
 		select {
 		case req := <-w.newWorkCh:
-			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
+                       //todo it is about block produce, change later.
+                       fmt.Printf("req", req)
+
+						//w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
 
 		case slotTime := <-w.chainSlotTimer:
 			w.commitNewWork(nil, false, int64(slotTime))
@@ -556,7 +561,8 @@ func (w *worker) mainLoop() {
 				// submit mining work here since all empty submission will be rejected
 				// by clique. Of course the advance sealing(empty submission) is disabled.
 				if w.chainConfig.Clique != nil && w.chainConfig.Clique.Period == 0 {
-					w.commitNewWork(nil, true, time.Now().Unix())
+					// todo it is about block produce, change later
+					// w.commitNewWork(nil, true, time.Now().Unix())
 				}
 			}
 			atomic.AddInt32(&w.newTxs, int32(len(ev.Txs)))

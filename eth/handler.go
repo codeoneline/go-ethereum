@@ -18,6 +18,7 @@ package eth
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/consensus"
 	"math"
 	"math/big"
 	"sync"
@@ -218,7 +219,7 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		return n, err
 	}
 	h.blockFetcher = fetcher.NewBlockFetcher(false, nil, h.chain.GetBlockByHash, validator, h.BroadcastBlock, heighter, nil, inserter, h.removePeer)
-
+	h.chain.RegisterSwitchEngine(h)
 	fetchTx := func(peer string, hashes []common.Hash) error {
 		p := h.peers.peer(peer)
 		if p == nil {
@@ -345,7 +346,14 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	// Handle incoming messages until the connection is torn down
 	return handler(peer)
 }
+func (h *handler) SwitchEngine(engine consensus.Engine) {
+	validator := func(header *types.Header) error {
+		return h.chain.Engine().VerifyHeader(h.chain, header, true)
+	}
 
+	h.blockFetcher.UpdateValidator(validator)
+	//todo need updateValidator for TXFetcher??
+}
 // runSnapExtension registers a `snap` peer into the joint eth/snap peerset and
 // starts handling inbound messages. As `snap` is only a satellite protocol to
 // `eth`, all subsystem registrations and lifecycle management will be done by

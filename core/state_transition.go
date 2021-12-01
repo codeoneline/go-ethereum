@@ -18,6 +18,8 @@ package core
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/pos/incentive"
+	"github.com/ethereum/go-ethereum/pos/util"
 	"math"
 	"math/big"
 
@@ -117,7 +119,7 @@ func (result *ExecutionResult) Revert() []byte {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool) (uint64, error) {
+func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool, to *common.Address) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if isContractCreation && isHomestead {
@@ -153,6 +155,10 @@ func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation b
 	if accessList != nil {
 		gas += uint64(len(accessList)) * params.TxAccessListAddressGas
 		gas += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
+	}
+	// reduce gas used for pos tx
+	if vm.IsPosPrecompiledAddr(to) {
+		gas = gas/10
 	}
 	return gas, nil
 }
@@ -300,7 +306,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 	}
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, homestead, istanbul)
+	gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, homestead, istanbul, msg.To())
 	if err != nil {
 		return nil, err
 	}
@@ -373,8 +379,17 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	effectiveTip := st.gasPrice
 	if london {
 		effectiveTip = cmath.BigMin(st.gasTipCap, new(big.Int).Sub(st.gasFeeCap, st.evm.Context.BaseFee))
+		st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), effectiveTip))
+	} else {
+		if !params.IsPosActive() {
+			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice))
+		} else {
+			epochID, _ := util.GetEpochSlotIDFromDifficulty(st.evm.Context.Difficulty)
+			incentive.AddEpochGas(st.state, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), st.gasPrice), epochID)
+		}
 	}
-	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(usedGas), effectiveTip))
+
+
 
 	return &ExecutionResult{
 		UsedGas:    usedGas, //st.gasUsed(),

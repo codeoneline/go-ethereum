@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/pos/posconfig"
+	"github.com/ethereum/go-ethereum/pos/util"
 	"math/big"
 	"runtime"
 	"time"
@@ -279,6 +281,11 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 	cap := uint64(0x7fffffffffffffff)
 	if header.GasLimit > cap {
 		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, cap)
+	}
+
+	epId, _ := util.CalEpochSlotID(parent.Time)
+	if epId >= posconfig.ApolloEpochID {
+		params.GasLimitBoundDivisor = params.GasLimitBoundDivisorNew
 	}
 	// Verify that the gasUsed is <= gasLimit
 	if header.GasUsed > header.GasLimit {

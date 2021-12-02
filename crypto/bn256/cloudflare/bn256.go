@@ -20,7 +20,9 @@ package bn256
 
 import (
 	"crypto/rand"
+	"encoding/binary"
 	"errors"
+	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 	"math/big"
 )
@@ -166,6 +168,58 @@ func (e *G1) Unmarshal(m []byte) ([]byte, error) {
 	return m[2*numBytes:], nil
 }
 
+// add by Jacob begin
+var (
+	bn256_B        = big.NewInt(3)
+	bn256_q        = new(big.Int).Div(new(big.Int).Add(P, big.NewInt(1)), big.NewInt(4))
+	err_ep_nil     = errors.New("ep is zero")
+	err_compress   = errors.New("compress failed")
+	err_decompress = errors.New("decompress failed")
+	err_decode     = errors.New("decode failed")
+	err_infinity   = errors.New("infinity point")
+)
+
+func GfpToBytes(p *gfP) []byte {
+	bs := make([]byte, 32)
+	for i := 0; i < 4; i++ {
+		binary.LittleEndian.PutUint64(bs[i*8:], p[i])
+	}
+
+	return bs
+}
+func BytesToGfp(b []byte) *gfP {
+	var g gfP
+	for i := 0; i < 4; i++ {
+		g[i] = binary.LittleEndian.Uint64(b[8*i:])
+	}
+
+	return &g
+}
+
+func (e *G1) EncodeRLP(w io.Writer) error {
+	if e.p == nil {
+		return err_ep_nil
+	}
+	b := e.Marshal()
+	return rlp.Encode(w, b)
+}
+
+// DecodeRLP implements rlp.Decoder
+func (e *G1) DecodeRLP(s *rlp.Stream) error {
+	if e.p == nil {
+		e.p = new(curvePoint)
+	}
+	var b = make([]byte, 64)
+	err := s.Decode(&b)
+	if err != nil {
+		return err
+	}
+	_, err = e.Unmarshal(b)
+	return err
+}
+
+// add by Jacob end
+
 // G2 is an abstract cyclic group. The zero value is suitable for use as the
 // output of an operation, but cannot be used as an input.
 type G2 struct {
@@ -306,6 +360,35 @@ func (e *G2) Unmarshal(m []byte) ([]byte, error) {
 	}
 	return m[4*numBytes:], nil
 }
+
+// add by jacob begin
+func (e *G2) EncodeRLP(w io.Writer) error {
+	if e.p == nil {
+		return err_ep_nil
+	}
+	if e.p.IsInfinity() {
+		return err_infinity
+	}
+
+	b := e.Marshal()
+	return rlp.Encode(w, b)
+}
+
+// DecodeRLP implements rlp.Decoder
+func (e *G2) DecodeRLP(s *rlp.Stream) error {
+	if e.p == nil {
+		e.p = new(twistPoint)
+	}
+	var b = make([]byte, 128)
+	err := s.Decode(&b)
+	if err != nil {
+		return err
+	}
+	_, err = e.Unmarshal(b)
+	return err
+}
+
+// add by jacob end.
 
 // GT is an abstract cyclic group. The zero value is suitable for use as the
 // output of an operation, but cannot be used as an input.

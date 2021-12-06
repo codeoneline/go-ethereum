@@ -19,7 +19,6 @@ package pluto
 
 import (
 	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/trie"
 	"io"
 	"math"
@@ -180,7 +179,6 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.Nonce,
 	})
 	hasher.Sum(hash[:0])
-	fmt.Println("========================header:", header)
 	return hash
 }
 
@@ -813,6 +811,8 @@ func (c *Pluto) Finalize(chain consensus.ChainHeaderReader, header *types.Header
 		} else {
 			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
 		}
+		state.Finalise(true)
+		header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
 
 		snap = state.Snapshot()
 		if !epochLeader.StakeOutRun(state, epochID) {

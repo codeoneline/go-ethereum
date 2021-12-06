@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 	"runtime"
 	"strconv"
@@ -35,7 +34,7 @@ func CalEpochSlotID(time uint64) (epochId, slotId uint64) {
 	epochId = uint64(timeUnix / epochTimespan)
 	slotId = uint64(timeUnix / posconfig.SlotTime % posconfig.SlotCount)
 	//todo need to comment below one line
-	fmt.Println("CalEpochSlotID:", epochId, slotId)
+	//fmt.Println("CalEpochSlotID:", epochId, slotId)
 	return epochId, slotId
 }
 

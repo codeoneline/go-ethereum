@@ -689,7 +689,10 @@ func (e *Epocher) GetEpochProbability(epochId uint64, addr common.Address) (*vm.
 
 	// try to get current feeRate
 	feeRate := staker.FeeRate
-	curStateDb, err := e.blkChain.StateAt(e.blkChain.CurrentBlock().Root())
+	curBlock := e.blkChain.CurrentBlock().Number().Uint64()-1
+	targetRoot := e.blkChain.GetHeaderByNumber(curBlock).Root
+	curStateDb, err := e.blkChain.StateAt(targetRoot)
+	//curStateDb, err := e.blkChain.StateAt(e.blkChain.CurrentBlock().Root())
 	if err != nil {
 		return nil, err
 	} else {
@@ -738,7 +741,10 @@ func saveStakeOut(stakeOutInfo []RefundInfo, epochID uint64) error {
 }
 func coreTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
 	if core.CanTransfer(db, sender, amount) {
+		fmt.Println("coreTransfer:", sender.String(), recipient.String(), amount.String())
 		core.Transfer(db, sender, recipient, amount)
+	}else{
+		panic("coreTransfer")
 	}
 }
 func isInactiveValidator(state *state.StateDB, addr common.Address, baseEpochId uint64) bool {
@@ -831,6 +837,8 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		for j := 0; j < len(staker.Clients); j++ {
 			// edit the validator Amount
 			if epochID >= staker.Clients[j].QuitEpoch && staker.Clients[j].QuitEpoch != 0 {
+				//fmt.Println("coreTransfer:", vm.WanCscPrecompileAddr, staker.Clients[j].Address,"of",staker.Address.String(), staker.Clients[j].Amount.String())
+
 				coreTransfer(stateDb, vm.WanCscPrecompileAddr, staker.Clients[j].Address, staker.Clients[j].Amount)
 				stakeOutInfo = recordStakeOut(stakeOutInfo, staker.Clients[j].Address, staker.Clients[j].Amount)
 				clientChanged = true
@@ -915,5 +923,14 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		}
 	}
 	saveStakeOut(stakeOutInfo, epochID)
+	// TODO fix bugs.
+	if epochID == 18146 {
+		value,_ := big.NewInt(0).SetString("2500000000000000000000",10)
+		coreTransfer(stateDb, vm.WanCscPrecompileAddr, common.HexToAddress("0xa70e1b8F66717609305BBf288d46dd34c2328Fd9"), value)
+	}
+	if epochID == 18247 {
+		value,_ := big.NewInt(0).SetString("1000000000000000000000",10)
+		coreTransfer(stateDb, vm.WanCscPrecompileAddr, common.HexToAddress("0xeFBd4Bf1aD83ba480865DD6de322D39FbEa445F1"), value)
+	}
 	return true
 }

@@ -38,8 +38,30 @@ func (self *StateDB) SetStateByteArray(addr common.Address, key common.Hash, val
 	}
 }
 
+
+
 // cb is callback function. cb return true indicating like to continue, return false indicating stop
 func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key common.Hash, value []byte) bool) {
+
+	so := db.getStateObject(addr)
+	if so == nil {
+		return
+	}
+
+
+	it := trie.NewIterator(so.getTrie(db.db).NodeIterator(nil))
+	for it.Next() {
+		// ignore cached values
+		key := common.BytesToHash(db.trie.GetKey(it.Key))
+		if !cb(key, it.Value) {
+			return
+		}
+	}
+}
+
+
+// cb is callback function. cb return true indicating like to continue, return false indicating stop
+func (db *StateDB) ForEachStorageByteArray2(addr common.Address, cb func(key common.Hash, value []byte) bool) {
 
 	epochid,_ := util.GetCurrentBlkEpochSlotID()
 	if epochid < posconfig.Cfg().MercuryEpochId {
@@ -80,7 +102,7 @@ func (db *StateDB) ForEachStorageByteArrayBeforeFork(addr common.Address, cb fun
 	}
 
 	// When iterating over the storage check the cache first
-	for h, value := range so.dirtyStorageByteArray {
+	for h, value := range so.pendingStorageByteArray {
 		if !cb(h, value) {
 			return
 		}
@@ -105,7 +127,7 @@ func (db *StateDB) ForEachStorageByteArrayBeforeFork(addr common.Address, cb fun
 		//		return
 		//	}
 		//}
-		if _, ok := so.pendingStorageByteArray[key]; !ok {
+		if _, ok := so.pendingStorage[key]; !ok {
 			if !cb(key, it.Value) {
 				return
 			}

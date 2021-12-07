@@ -811,8 +811,8 @@ func (c *Pluto) Finalize(chain consensus.ChainHeaderReader, header *types.Header
 		} else {
 			log.Debug("--------Incentive Finish--------", "number", header.Number.String(), "epochID", epochID)
 		}
-		state.Finalise(true)
-		header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
+		//state.Finalise(true)
+		//header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
 
 		snap = state.Snapshot()
 		if !epochLeader.StakeOutRun(state, epochID) {
@@ -829,7 +829,7 @@ func (c *Pluto) Finalize(chain consensus.ChainHeaderReader, header *types.Header
 	}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
-	state.Finalise(true)
+	//state.Finalise(true)
 	header.Root = state.IntermediateRoot(true /*chain.Config().IsEIP158(header.Number)*/)
 
 	header.UncleHash = types.CalcUncleHash(nil)

@@ -47,14 +47,30 @@ func (db *StateDB) ForEachStorageByteArray(addr common.Address, cb func(key comm
 	if so == nil {
 		return
 	}
+	for h, value := range so.dirtyStorageByteArray {
+		if !cb(h, value) {
+			return
+		}
+	}
+
+
+	for h, value := range so.pendingStorageByteArray {
+		if !cb(h, value) {
+			return
+		}
+	}
 
 
 	it := trie.NewIterator(so.getTrie(db.db).NodeIterator(nil))
 	for it.Next() {
 		// ignore cached values
 		key := common.BytesToHash(db.trie.GetKey(it.Key))
-		if !cb(key, it.Value) {
-			return
+		_, ok1 := so.dirtyStorageByteArray[key]
+		_, ok2 := so.pendingStorageByteArray[key]
+		if !ok1 && !ok2 {
+			if !cb(key, it.Value) {
+				return
+			}
 		}
 	}
 }

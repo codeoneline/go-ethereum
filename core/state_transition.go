@@ -310,6 +310,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("IntrinsicGas:",gas)
 	// wanchain priv tx
 	var stampTotalGas uint64
 	if types.IsPrivacyTransaction(st.msg.TxType()) {

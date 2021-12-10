@@ -32,7 +32,7 @@ type StorageByteArray map[common.Hash][]byte
 // Finally, call CommitTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address  common.Address
-	addrHash common.Hash // hash of ethereum address of the account
+	addrHash common.Hash // hash of ethereum address of the accountGetStateByteArray
 	data    types.StateAccount
 	db       *StateDB
 

@@ -346,7 +346,12 @@ func NewEIP155Signer(chainId *big.Int) EIP155Signer {
 }
 
 func (s EIP155Signer) ChainID() *big.Int {
-	return s.chainId
+	chainId := s.chainId
+
+	if params.JupiterChainId(s.chainId.Uint64()) == chainId.Uint64() {
+		chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
+	}
+	return chainId
 }
 
 func (s EIP155Signer) Equal(s2 Signer) bool {
@@ -357,17 +362,35 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType && tx.Type() !=WanJupiterTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 	if !tx.Protected() {
 		return HomesteadSigner{}.Sender(tx)
 	}
-	if tx.ChainId().Cmp(s.chainId) != 0 {
+	//if tx.ChainId().Cmp(s.chainId) != 0 {
+	//	return common.Address{}, ErrInvalidChainId
+	//}
+	if !(tx.ChainId().Cmp(s.chainId) == 0 || tx.ChainId().Uint64() == params.JupiterChainId(s.chainId.Uint64())) {
 		return common.Address{}, ErrInvalidChainId
 	}
+
+	if IsEthereumTx(tx.Type()) && tx.ChainId().Cmp(s.chainId) == 0 && params.IsOldChainId(s.chainId.Uint64()) {
+		return common.Address{}, ErrInvalidChainId
+	}
+
+	if !IsEthereumTx(tx.Type()) && tx.ChainId().Uint64() == params.JupiterChainId(s.chainId.Uint64()) {
+		return common.Address{}, ErrInvalidChainId
+	}
+
 	V, R, S := tx.RawSignatureValues()
-	V = new(big.Int).Sub(V, s.chainIdMul)
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		V = new(big.Int).Sub(V, new(big.Int).SetUint64(params.JupiterChainId(s.chainId.Uint64())*2))
+	} else {
+		V = new(big.Int).Sub(V, s.chainIdMul)
+	}
+
+	// V = new(big.Int).Sub(V, s.chainIdMul)
 	V.Sub(V, big8)
 	return recoverPlain(s.Hash(tx), R, S, V, true)
 }
@@ -375,7 +398,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType && tx.Type() !=WanJupiterTxType {
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
 	R, S, V = decodeSignature(sig)
@@ -389,6 +412,25 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
+
+	chainId := s.chainId
+
+	if params.JupiterChainId(s.chainId.Uint64()) == tx.ChainId().Uint64() {
+		chainId = big.NewInt(0).SetUint64(params.JupiterChainId(s.chainId.Uint64()))
+	}
+
+	if IsEthereumTx(tx.Type()) {
+		return rlpHash([]interface{}{
+			tx.Nonce(),
+			tx.GasPrice(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+			chainId, uint(0), uint(0),
+		})
+	}
+
 	return rlpHash([]interface{}{
 		tx.Type(), // TODO MERGE gwan
 		tx.Nonce(),
@@ -397,7 +439,7 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 		tx.To(),
 		tx.Value(),
 		tx.Data(),
-		s.chainId, uint(0), uint(0),
+		chainId, uint(0), uint(0),
 	})
 }
 
@@ -421,7 +463,7 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType {
+	if tx.Type() != LegacyTxType && tx.Type() != WanLegacyTxType && tx.Type() != WanTestnetTxType && tx.Type() != WanPosTxType && tx.Type() != WanPrivTxType && tx.Type() !=WanJupiterTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 	v, r, s := tx.RawSignatureValues()

@@ -425,6 +425,7 @@ var (
 	s256Addid            [4]byte
 	s256MulGid           [4]byte
 	checkSigid           [4]byte
+	checkSigid2          [4]byte
 	encid                [4]byte
 	hardCapid            [4]byte
 	s256MulPkid          [4]byte
@@ -448,7 +449,8 @@ func init() {
 	copy(getPosAvgReturnId[:], solenhanceAbi.Methods["getPosAvgReturn"].Id())
 	copy(s256Addid[:], solenhanceAbi.Methods["add"].Id())
 	copy(s256MulGid[:], solenhanceAbi.Methods["mulG"].Id())
-	copy(checkSigid[:], solenhanceAbi.Methods["checkSigid"].Id())
+	copy(checkSigid[:], solenhanceAbi.Methods["checkSig"].Id())
+	copy(checkSigid2[:], common.Hex2Bytes("861731d5"))
 	copy(encid[:], solenhanceAbi.Methods["enc"].Id())
 	copy(hardCapid[:], solenhanceAbi.Methods["getHardCap"].Id())
 	copy(s256MulPkid[:], solenhanceAbi.Methods["mulPk"].Id())
@@ -496,7 +498,7 @@ func (s *SolEnhance) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return s.s256MulG(input[4:], contract, evm)
 	} else if methodId == s256CalPolyCommitid {
 		return s.s256CalPolyCommit(input[4:], contract, evm)
-	} else if methodId == checkSigid {
+	} else if methodId == checkSigid || methodId == checkSigid2 {
 		return s.checkSig(input[4:], contract, evm)
 	} else if methodId == encid {
 		return s.encrypt(input[4:], contract, evm)

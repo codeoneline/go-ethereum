@@ -747,6 +747,11 @@ func coreTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.I
 		panic("coreTransfer")
 	}
 }
+func CoreTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
+	coreTransfer(db, sender, recipient, amount)
+	return 
+}
+	
 func isInactiveValidator(state *state.StateDB, addr common.Address, baseEpochId uint64) bool {
 	checkCount := (uint64)(64)
 	for i := (uint64)(1); i <= checkCount; i++ {
@@ -923,14 +928,5 @@ func StakeOutRun(stateDb *state.StateDB, epochID uint64) bool {
 		}
 	}
 	saveStakeOut(stakeOutInfo, epochID)
-	// TODO fix bugs.
-	if epochID == 18146 {
-		value,_ := big.NewInt(0).SetString("2500000000000000000000",10)
-		coreTransfer(stateDb, vm.WanCscPrecompileAddr, common.HexToAddress("0xa70e1b8F66717609305BBf288d46dd34c2328Fd9"), value)
-	}
-	if epochID == 18247 {
-		value,_ := big.NewInt(0).SetString("1000000000000000000000",10)
-		coreTransfer(stateDb, vm.WanCscPrecompileAddr, common.HexToAddress("0xeFBd4Bf1aD83ba480865DD6de322D39FbEa445F1"), value)
-	}
 	return true
 }

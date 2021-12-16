@@ -112,13 +112,14 @@ func newObject(db *StateDB, address common.Address, data types.StateAccount) *st
 		data.Root = emptyRoot
 	}
 	return &stateObject{
-		db:             db,
-		address:        address,
-		addrHash:       crypto.Keccak256Hash(address[:]),
-		data:           data,
-		originStorage:  make(Storage),
-		pendingStorage: make(Storage),
-		dirtyStorage:   make(Storage),
+		db:                      db,
+		address:                 address,
+		addrHash:                crypto.Keccak256Hash(address[:]),
+		data:                    data,
+		originStorage:           make(Storage),
+		pendingStorage:          make(Storage),
+		dirtyStorage:            make(Storage),
+		originStorageByteArray:  make(StorageByteArray),
 		dirtyStorageByteArray:   make(StorageByteArray),
 		pendingStorageByteArray: make(StorageByteArray),
 	}
@@ -306,25 +307,26 @@ func (s *stateObject) setState(key, value common.Hash) {
 // finalise moves all dirty storage slots into the pending area to be hashed or
 // committed later. It is invoked at the end of every transaction.
 func (s *stateObject) finalise(prefetch bool) {
-
-	//todo Jacob why not add StorageByteArray to slotsToPrefetch??
-
-	slotsToPrefetch := make([][]byte, 0, len(s.dirtyStorage))
+	slotsToPrefetch := make([][]byte, 0, len(s.dirtyStorage)+len(s.dirtyStorageByteArray))
 	for key, value := range s.dirtyStorage {
 		s.pendingStorage[key] = value
 		if value != s.originStorage[key] {
 			slotsToPrefetch = append(slotsToPrefetch, common.CopyBytes(key[:])) // Copy needed for closure
 		}
 	}
+
+	for key, value := range s.dirtyStorageByteArray {
+		s.pendingStorageByteArray[key] = value
+		if !bytes.Equal(value, s.originStorageByteArray[key]) {
+			slotsToPrefetch = append(slotsToPrefetch, common.CopyBytes(key[:])) // Copy needed for closure
+		}
+	}
+
 	if s.db.prefetcher != nil && prefetch && len(slotsToPrefetch) > 0 && s.data.Root != emptyRoot {
 		s.db.prefetcher.prefetch(s.data.Root, slotsToPrefetch)
 	}
 	if len(s.dirtyStorage) > 0 {
 		s.dirtyStorage = make(Storage)
-	}
-
-	for key, value := range s.dirtyStorageByteArray {
-		s.pendingStorageByteArray[key] = value
 	}
 	if len(s.dirtyStorageByteArray) > 0 {
 		s.dirtyStorageByteArray = make(StorageByteArray)
@@ -350,7 +352,7 @@ func (s *stateObject) updateTrie(db Database) Trie {
 	tr := s.getTrie(db)
 	hasher := s.db.hasher
 
-	usedStorage := make([][]byte, 0, len(s.pendingStorage))
+	usedStorage := make([][]byte, 0, len(s.pendingStorage)+len(s.pendingStorageByteArray))
 	for key, value := range s.pendingStorage {
 		// Skip noop changes, persist actual changes
 		if value == s.originStorage[key] {
@@ -383,12 +385,34 @@ func (s *stateObject) updateTrie(db Database) Trie {
 	}
 
 	for key, value := range s.pendingStorageByteArray {
+		// Skip noop changes, persist actual changes
+		if bytes.Equal(value, s.originStorageByteArray[key]) {
+			continue
+		}
+		s.originStorageByteArray[key] = value
+
+		// TODO: snapShot
 		if len(value) == 0 {
 			s.setError(tr.TryDelete(key[:]))
+			s.db.StorageDeleted += 1
 		} else {
 			s.setError(tr.TryUpdate(key[:], value))
+			s.db.StorageUpdated += 1
 
 		}
+
+		// If state snapshotting is active, cache the data til commit
+		if s.db.snap != nil {
+			if storage == nil {
+				// Retrieve the old storage map, if available, create a new one otherwise
+				if storage = s.db.snapStorage[s.addrHash]; storage == nil {
+					storage = make(map[common.Hash][]byte)
+					s.db.snapStorage[s.addrHash] = storage
+				}
+			}
+			storage[crypto.HashData(hasher, key[:])] = value // v will be nil if it's deleted
+		}
+		usedStorage = append(usedStorage, common.CopyBytes(key[:])) // Copy needed for closure
 	}
 	if len(s.pendingStorageByteArray) > 0 {
 		s.pendingStorageByteArray = make(StorageByteArray)
